@@ -1,0 +1,18 @@
+{
+  "Stocks": {
+    "Tickers": "AMD,ABBV,ALB,AAL,CPB,TSLA"
+  },
+  "Trend": {
+    "sma_enabled": 1,
+    "sma_long": 200,
+    "sma_short": 5,
+    "sma_period": "1y"
+  },
+  "Momentum": {},
+  "Volume": {},
+  "Sup/Res": {},
+  "Volatility": {},
+  "Patterns": {},
+  "Cycles": {},
+  "Sentiment": {}
+}
