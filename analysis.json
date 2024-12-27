@@ -3,11 +3,11 @@
     "Tickers": "AMD,ABBV,ALB,AAL,CPB,TSLA"
   },
   "Trend": {
-    "sma_enabled": 1,
-    "sma_long": 200,
-    "sma_short": 20,
-    "sma_period": "1y",
-    "sma_eval_window": 10
+    "sma_cross_enabled": 1,
+    "sma_cross_long": 20,
+    "sma_cross_short": 5,
+    "sma_cross_period": "1y",
+    "sma_cross_eval_window": 5
   },
   "Momentum": {},
   "Volume": {},

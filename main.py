@@ -24,17 +24,17 @@ def fetch_stock_data(ticker, period="1y"):
 # Function to calculate moving averages and detect crossings
 def detect_crossings(stock_data, short_window, long_window, eval_window):
     """Detect days where SMA crosses."""
-    stock_data[f"SMA_{short_window}"] = stock_data['Close'].rolling(window=short_window).mean()
-    stock_data[f"SMA_{long_window}"] = stock_data['Close'].rolling(window=long_window).mean()
+    stock_data[f"SMA_CROSS_{short_window}"] = stock_data['Close'].rolling(window=short_window).mean()
+    stock_data[f"SMA_CROSS_{long_window}"] = stock_data['Close'].rolling(window=long_window).mean()
 
     # Identify crossing points
-    stock_data[f"Prev_SMA_{short_window}"] = stock_data[f"SMA_{short_window}"].shift(1)
-    stock_data[f"Prev_SMA_{long_window}"] = stock_data[f"SMA_{long_window}"].shift(1)
+    stock_data[f"Prev_SMA_CROSS_{short_window}"] = stock_data[f"SMA_CROSS_{short_window}"].shift(1)
+    stock_data[f"Prev_SMA_CROSS_{long_window}"] = stock_data[f"SMA_CROSS_{long_window}"].shift(1)
     stock_data['Cross'] = np.where(
-        (stock_data[f"Prev_SMA_{short_window}"] <= stock_data[f"Prev_SMA_{long_window}"]) & (stock_data[f"SMA_{short_window}"] > stock_data[f"SMA_{long_window}"]),
+        (stock_data[f"Prev_SMA_CROSS_{short_window}"] <= stock_data[f"Prev_SMA_CROSS_{long_window}"]) & (stock_data[f"SMA_CROSS_{short_window}"] > stock_data[f"SMA_CROSS_{long_window}"]),
         'Buy',
         np.where(
-            (stock_data[f"Prev_SMA_{short_window}"] >= stock_data[f"Prev_SMA_{long_window}"]) & (stock_data[f"SMA_{short_window}"] < stock_data[f"SMA_{long_window}"]),
+            (stock_data[f"Prev_SMA_CROSS_{short_window}"] >= stock_data[f"Prev_SMA_CROSS_{long_window}"]) & (stock_data[f"SMA_CROSS_{short_window}"] < stock_data[f"SMA_CROSS_{long_window}"]),
             'Sell',
             None
         )
@@ -70,7 +70,7 @@ def log_error(message, logfile):
 # Main function
 def main():
     parser = argparse.ArgumentParser(description="Analyze stock crossings of moving averages.")
-    parser.add_argument('-i', '--input', required=True, help="Input file containing stock tickers.")
+    parser.add_argument('-i', '--input', required=True, action=LoadFromFile, help="Input file containing stock tickers in JSON format.")
     parser.add_argument('-e', '--email', help="Email address to send results.")
     parser.add_argument('-c', '--config', required=True, action=LoadFromFile, help="Configuration File.")
     parser.add_argument('-a', '--analysis', required=True, action=LoadFromFile, help="Analysis Definition File.")
@@ -80,25 +80,25 @@ def main():
     analysis_settings = args.analysis
 
     try:
-        tickers = read_tickers_from_file(args.input)
-        print(f"Loaded {len(tickers)} tickers from the file.")
+        ticker_list = args.input
 
         # Get current date and time in the format YYYY-MM-DDTHH:MM:SS
         current_datetime = datetime.now().strftime('%Y-%m-%dT%H-%M-%S')
         current_date = datetime.now().strftime('%d/%m/%Y')
 
-        if analysis_settings['Trend']['sma_enabled']:
+        if analysis_settings['Trend']['sma_cross_enabled']:
 
             all_crossings_sma = None
 
-            for ticker in tickers:
+            for ticker_code in ticker_list:
+                ticker = ticker_code['Code']
                 print(f"Analyzing {ticker}...")
 
                 try:
-                    stock_data = fetch_stock_data(ticker, period=analysis_settings['Trend']['sma_period'])
-                    crossings = detect_crossings(stock_data, short_window=analysis_settings['Trend']['sma_short'],
-                                                 long_window=analysis_settings['Trend']['sma_long'],
-                                                 eval_window=analysis_settings['Trend']['sma_eval_window'])
+                    stock_data = fetch_stock_data(ticker, period=analysis_settings['Trend']['sma_cross_period'])
+                    crossings = detect_crossings(stock_data, short_window=analysis_settings['Trend']['sma_cross_short'],
+                                                 long_window=analysis_settings['Trend']['sma_cross_long'],
+                                                 eval_window=analysis_settings['Trend']['sma_cross_eval_window'])
                     if not crossings.empty:
                         print(f"Crossings found for {ticker}. Saving to analysis file.")
                         crossings.index = [ticker]*len(crossings)
@@ -113,10 +113,10 @@ def main():
             # Compile results for email
             if all_crossings_sma is not None:
                 all_crossings_sma.to_csv(f"analysis_{current_datetime}.csv", index=False)
-                all_crossings_sma_html = all_crossings_sma.dropna().to_html(index=True)
+                all_crossings_sma_cross_html = all_crossings_sma.dropna().to_html(index=True)
                 body = f"<html><body><h2>Stock Data Report</h2>" \
-                       f"<h3>Trend Analysis - SMA</h3>\
-                        {all_crossings_sma_html}\
+                       f"<h3>Trend Analysis - SMA Cross</h3>\
+                        {all_crossings_sma_cross_html}\
                         </body></html>"
                 if args.email:
                     send_html_email(sender_email=settings['Email']['from_email'], receiver_email=args.email,
