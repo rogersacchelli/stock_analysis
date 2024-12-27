@@ -1,5 +1,5 @@
 import yfinance as yf
-from datetime import datetime
+from datetime import datetime, timedelta
 import numpy as np
 import os
 import argparse
@@ -22,28 +22,31 @@ def fetch_stock_data(ticker, period="1y"):
 
 
 # Function to calculate moving averages and detect crossings
-def detect_crossings(stock_data, short_window, long_window):
+def detect_crossings(stock_data, short_window, long_window, eval_window):
     """Detect days where SMA crosses."""
-    stock_data['SMA20'] = stock_data['Close'].rolling(window=short_window).mean()
-    stock_data['SMA200'] = stock_data['Close'].rolling(window=long_window).mean()
+    stock_data[f"SMA_{short_window}"] = stock_data['Close'].rolling(window=short_window).mean()
+    stock_data[f"SMA_{long_window}"] = stock_data['Close'].rolling(window=long_window).mean()
 
     # Identify crossing points
-    stock_data['Prev_SMA20'] = stock_data['SMA20'].shift(1)
-    stock_data['Prev_SMA200'] = stock_data['SMA200'].shift(1)
+    stock_data[f"Prev_SMA_{short_window}"] = stock_data[f"SMA_{short_window}"].shift(1)
+    stock_data[f"Prev_SMA_{long_window}"] = stock_data[f"SMA_{long_window}"].shift(1)
     stock_data['Cross'] = np.where(
-        (stock_data['Prev_SMA20'] <= stock_data['Prev_SMA200']) & (stock_data['SMA20'] > stock_data['SMA200']),
+        (stock_data[f"Prev_SMA_{short_window}"] <= stock_data[f"Prev_SMA_{long_window}"]) & (stock_data[f"SMA_{short_window}"] > stock_data[f"SMA_{long_window}"]),
         'Buy',
         np.where(
-            (stock_data['Prev_SMA20'] >= stock_data['Prev_SMA200']) & (stock_data['SMA20'] < stock_data['SMA200']),
+            (stock_data[f"Prev_SMA_{short_window}"] >= stock_data[f"Prev_SMA_{long_window}"]) & (stock_data[f"SMA_{short_window}"] < stock_data[f"SMA_{long_window}"]),
             'Sell',
             None
         )
     )
 
+    today = np.datetime64('today', 'D')
+    cutoff_date = today - np.timedelta64(eval_window, 'D')
+
     # Add a Date column and filter rows with crossings
     crossings = stock_data[stock_data['Cross'].notna()]
     crossings = crossings.reset_index()  # Reset index to access the Date column
-    return crossings
+    return crossings[crossings['Date'] >= cutoff_date]
 
 
 # Function to read tickers from a file
@@ -61,29 +64,6 @@ def log_error(message, logfile):
     """Log errors to the error log file."""
     with open(logfile, 'a') as log_file:
         log_file.write(message + '\n')
-
-
-# Function to save analysis data
-def save_analysis_data(ticker, crossings, analysis_frame):
-    """Save analysis data to a CSV file."""
-    #if analysis_frame is None:
-    return pd.concat([analysis_frame, crossings], ignore_index=True)
-    #else:
-    #    return pd.concat([analysis_frame, crossings], ignore_index=True)
-
-
-# Function to load settings from a configuration file
-def load_settings(config_file):
-    """Load settings from a configuration file."""
-    config = configparser.ConfigParser()
-    config.read(config_file)
-    settings = {
-        'smtp_server': config.get('Email', 'smtp_server'),
-        'smtp_port': config.getint('Email', 'smtp_port'),
-        'from_email': config.get('Email', 'from_email'),
-        'from_password': config.get('Email', 'from_password')
-    }
-    return settings
 
 
 
@@ -105,7 +85,7 @@ def main():
 
         # Get current date and time in the format YYYY-MM-DDTHH:MM:SS
         current_datetime = datetime.now().strftime('%Y-%m-%dT%H-%M-%S')
-        current_date = datetime.now().strftime('%d %m %Y')
+        current_date = datetime.now().strftime('%d/%m/%Y')
 
         if analysis_settings['Trend']['sma_enabled']:
 
@@ -117,7 +97,8 @@ def main():
                 try:
                     stock_data = fetch_stock_data(ticker, period=analysis_settings['Trend']['sma_period'])
                     crossings = detect_crossings(stock_data, short_window=analysis_settings['Trend']['sma_short'],
-                                                 long_window=analysis_settings['Trend']['sma_long'])
+                                                 long_window=analysis_settings['Trend']['sma_long'],
+                                                 eval_window=analysis_settings['Trend']['sma_eval_window'])
                     if not crossings.empty:
                         print(f"Crossings found for {ticker}. Saving to analysis file.")
                         crossings.index = [ticker]*len(crossings)
@@ -133,12 +114,17 @@ def main():
             if all_crossings_sma is not None:
                 all_crossings_sma.to_csv(f"analysis_{current_datetime}.csv", index=False)
                 all_crossings_sma_html = all_crossings_sma.dropna().to_html(index=True)
-                body = f"<html><body><h2>Stock Data Report</h2>{all_crossings_sma_html}</body></html>"
+                body = f"<html><body><h2>Stock Data Report</h2>" \
+                       f"<h3>Trend Analysis - SMA</h3>\
+                        {all_crossings_sma_html}\
+                        </body></html>"
                 if args.email:
-                    send_html_email(sender_email=settings['from_email'], receiver_email=args.email,
-                                    subject=f"Stock Analysis {current_date}", html_content=body,
-                                    smtp_server=settings['smtp_server'], smtp_port=settings['smtp_port'],
-                                    password=settings['from_password'])
+                    send_html_email(sender_email=settings['Email']['from_email'], receiver_email=args.email,
+                                    subject=f"Stock Analysis {current_date}",
+                                    html_content=body,
+                                    smtp_server=settings['Email']['smtp_server'],
+                                    smtp_port=settings['Email']['smtp_port'],
+                                    password=settings['Email']['from_password'])
             else:
                 print("No results to send via email.")
 

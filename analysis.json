@@ -5,8 +5,9 @@
   "Trend": {
     "sma_enabled": 1,
     "sma_long": 200,
-    "sma_short": 5,
-    "sma_period": "1y"
+    "sma_short": 20,
+    "sma_period": "1y",
+    "sma_eval_window": 10
   },
   "Momentum": {},
   "Volume": {},
