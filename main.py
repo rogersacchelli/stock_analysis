@@ -1,13 +1,13 @@
 import yfinance as yf
 from datetime import datetime, timedelta
-import numpy as np
 import os
 import argparse
-import configparser
 import pandas as pd
-
-from utils.email import send_html_email
+from trend import detect_crossings
+from utils.analysis import analysis_to_file
+from utils.email import send_html_email, csv_to_html
 from utils.loadSettings import LoadFromFile
+from utils.utils import get_report_hash
 
 pd.options.mode.chained_assignment = None
 
@@ -16,37 +16,10 @@ pd.options.mode.chained_assignment = None
 def fetch_stock_data(ticker, period="1y"):
     """Fetch historical stock data for the given ticker."""
     stock_data = yf.download(ticker, period=period, multi_level_index=False)
+
     if stock_data.empty:
         raise ValueError(f"No data available for ticker {ticker}.")
     return stock_data
-
-
-# Function to calculate moving averages and detect crossings
-def detect_crossings(stock_data, short_window, long_window, eval_window):
-    """Detect days where SMA crosses."""
-    stock_data[f"SMA_CROSS_{short_window}"] = stock_data['Close'].rolling(window=short_window).mean()
-    stock_data[f"SMA_CROSS_{long_window}"] = stock_data['Close'].rolling(window=long_window).mean()
-
-    # Identify crossing points
-    stock_data[f"Prev_SMA_CROSS_{short_window}"] = stock_data[f"SMA_CROSS_{short_window}"].shift(1)
-    stock_data[f"Prev_SMA_CROSS_{long_window}"] = stock_data[f"SMA_CROSS_{long_window}"].shift(1)
-    stock_data['Cross'] = np.where(
-        (stock_data[f"Prev_SMA_CROSS_{short_window}"] <= stock_data[f"Prev_SMA_CROSS_{long_window}"]) & (stock_data[f"SMA_CROSS_{short_window}"] > stock_data[f"SMA_CROSS_{long_window}"]),
-        'Buy',
-        np.where(
-            (stock_data[f"Prev_SMA_CROSS_{short_window}"] >= stock_data[f"Prev_SMA_CROSS_{long_window}"]) & (stock_data[f"SMA_CROSS_{short_window}"] < stock_data[f"SMA_CROSS_{long_window}"]),
-            'Sell',
-            None
-        )
-    )
-
-    today = np.datetime64('today', 'D')
-    cutoff_date = today - np.timedelta64(eval_window, 'D')
-
-    # Add a Date column and filter rows with crossings
-    crossings = stock_data[stock_data['Cross'].notna()]
-    crossings = crossings.reset_index()  # Reset index to access the Date column
-    return crossings[crossings['Date'] >= cutoff_date]
 
 
 # Function to read tickers from a file
@@ -66,11 +39,11 @@ def log_error(message, logfile):
         log_file.write(message + '\n')
 
 
-
 # Main function
 def main():
     parser = argparse.ArgumentParser(description="Analyze stock crossings of moving averages.")
-    parser.add_argument('-i', '--input', required=True, action=LoadFromFile, help="Input file containing stock tickers in JSON format.")
+    parser.add_argument('-i', '--input', required=True, action=LoadFromFile,
+                        help="Input file containing stock tickers in JSON format.")
     parser.add_argument('-e', '--email', help="Email address to send results.")
     parser.add_argument('-c', '--config', required=True, action=LoadFromFile, help="Configuration File.")
     parser.add_argument('-a', '--analysis', required=True, action=LoadFromFile, help="Analysis Definition File.")
@@ -85,51 +58,94 @@ def main():
         # Get current date and time in the format YYYY-MM-DDTHH:MM:SS
         current_datetime = datetime.now().strftime('%Y-%m-%dT%H-%M-%S')
         current_date = datetime.now().strftime('%d/%m/%Y')
+        report_hash = get_report_hash(f"{args.email}" + str(analysis_settings) + current_datetime + str(args.input))
+        report_name = f"reports/{report_hash}.csv"
+        log_file = f"logs/{report_hash}.log"
+        analysis_data = {}
 
-        if analysis_settings['Trend']['sma_cross_enabled']:
+        for ticker_code in ticker_list:
+            ticker = ticker_code['Code']
+            print(f"Analyzing {ticker}...")
 
-            all_crossings_sma = None
+            try:
+                stock_data = fetch_stock_data(ticker, period=analysis_settings['Period'])
+            except Exception as e:
+                # Skip to next Ticket
+                print(str(e))
+                log_error(str(e), log_file)
+                continue
 
-            for ticker_code in ticker_list:
-                ticker = ticker_code['Code']
-                print(f"Analyzing {ticker}...")
-
+            if analysis_settings['Trend']['sma_cross']['enabled']:
                 try:
-                    stock_data = fetch_stock_data(ticker, period=analysis_settings['Trend']['sma_cross_period'])
-                    crossings = detect_crossings(stock_data, short_window=analysis_settings['Trend']['sma_cross_short'],
-                                                 long_window=analysis_settings['Trend']['sma_cross_long'],
-                                                 eval_window=analysis_settings['Trend']['sma_cross_eval_window'])
+                    crossings = detect_crossings(stock_data,
+                                                 short_window=analysis_settings['Trend']['sma_cross']['short'],
+                                                 long_window=analysis_settings['Trend']['sma_cross']['long'],
+                                                 eval_window=analysis_settings['Trend']['sma_cross']['eval_window'],
+                                                 average_type="SMA")
                     if not crossings.empty:
                         print(f"Crossings found for {ticker}. Saving to analysis file.")
-                        crossings.index = [ticker]*len(crossings)
-                        all_crossings_sma = pd.concat([all_crossings_sma, crossings])
+                        crossings.index = [ticker] * len(crossings)
+                        try:
+                            analysis_data[ticker]
+                        except:
+                            analysis_data.update({ticker: {}})
+
+                        analysis_data[ticker].update({'sma_cross': {"date": crossings['Date'].values[0],
+                                                                    "cross": crossings["Cross"].values[0]}})
                     else:
-                        print(f"No crossings detected for {ticker}.")
+                        print(f"No SMA crossings detected for {ticker}.")
                 except Exception as e:
                     error_message = f"Error analyzing {ticker}: {e}"
                     print(error_message)
-                    log_error(error_message, 'error_logfile.txt')
+                    log_error(error_message, log_file)
 
-            # Compile results for email
-            if all_crossings_sma is not None:
-                all_crossings_sma.to_csv(f"analysis_{current_datetime}.csv", index=False)
-                all_crossings_sma_cross_html = all_crossings_sma.dropna().to_html(index=True)
-                body = f"<html><body><h2>Stock Data Report</h2>" \
-                       f"<h3>Trend Analysis - SMA Cross</h3>\
-                        {all_crossings_sma_cross_html}\
-                        </body></html>"
-                if args.email:
-                    send_html_email(sender_email=settings['Email']['from_email'], receiver_email=args.email,
-                                    subject=f"Stock Analysis {current_date}",
-                                    html_content=body,
-                                    smtp_server=settings['Email']['smtp_server'],
-                                    smtp_port=settings['Email']['smtp_port'],
-                                    password=settings['Email']['from_password'])
-            else:
-                print("No results to send via email.")
+            if analysis_settings['Trend']['ema_cross']['enabled']:
 
+                try:
+                    crossings = detect_crossings(stock_data,
+                                                 short_window=analysis_settings['Trend']['ema_cross']['short'],
+                                                 long_window=analysis_settings['Trend']['ema_cross']['long'],
+                                                 eval_window=analysis_settings['Trend']['ema_cross']['eval_window'],
+                                                 average_type="EMA")
+                    if not crossings.empty:
+                        print(f"Crossings found for {ticker}. Saving to analysis file.")
+                        crossings.index = [ticker] * len(crossings)
+                        analysis_data[ticker].update({'ema_cross': {"date": crossings['Date'].values[0],
+                                                                    "cross": crossings["Cross"].values[0]}})
+                    else:
+                        print(f"No EMA crossings detected for {ticker}.")
+                except Exception as e:
+                    error_message = f"Error analyzing {ticker}: {e}"
+                    print(error_message)
+                    log_error(error_message, log_file)
+
+        # Create Report File
+        analysis_to_file(analysis_data, analysis_settings, report_name)
+
+        # Send Email
+        if args.email:
+            report_data = csv_to_html(report_name)
+
+            body = f"<html><body><h2>Daily Stock Report</h2>" \
+                   f"<h3>Trend Analysis</h3>\
+                    {report_data}\
+                    </body></html>"
+
+            send_html_email(sender_email=settings['Email']['from_email'], receiver_email=args.email,
+                            subject=f"Stock Analysis {current_date}",
+                            html_content=body,
+                            smtp_server=settings['Email']['smtp_server'],
+                            smtp_port=settings['Email']['smtp_port'],
+                            password=settings['Email']['from_password'])
+        else:
+            print("No results to send via email.")
     except Exception as e:
         print(f"Error: {e}")
+
+
+
+
+
 
 
 if __name__ == "__main__":

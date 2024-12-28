@@ -1,11 +1,12 @@
 import smtplib
+import csv
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
 
 def send_html_email(sender_email, receiver_email, subject, html_content,
                     smtp_server, smtp_port, password):
-  """
+    """
   Sends an HTML email using SMTP.
 
   Args:
@@ -18,30 +19,51 @@ def send_html_email(sender_email, receiver_email, subject, html_content,
     password: The password for SMTP authentication.
   """
 
-  try:
-    msg = MIMEMultipart('alternative')
-    msg['Subject'] = subject
-    msg['From'] = sender_email
-    msg['To'] = receiver_email
+    try:
+        msg = MIMEMultipart('alternative')
+        msg['Subject'] = subject
+        msg['From'] = sender_email
+        msg['To'] = receiver_email
 
-    text_part = "This is a plain text version of the message."
-    html_part = html_content
+        text_part = "This is a plain text version of the message."
+        html_part = html_content
 
-    msg.attach(MIMEText(text_part, 'plain'))
-    msg.attach(MIMEText(html_part, 'html'))
+        msg.attach(MIMEText(text_part, 'plain'))
+        msg.attach(MIMEText(html_part, 'html'))
 
-    with smtplib.SMTP(smtp_server, smtp_port) as server:
-      # Enable TLS for secure communication
-      server.starttls()
+        with smtplib.SMTP(smtp_server, smtp_port) as server:
+            # Enable TLS for secure communication
+            server.starttls()
 
-      # **Important:** Use an app password instead of your actual Gmail password
-      # Get your app password from your Google Account security settings.
-      # Refer to Google's documentation for detailed instructions.
+            # **Important:** Use an app password instead of your actual Gmail password
+            # Get your app password from your Google Account security settings.
+            # Refer to Google's documentation for detailed instructions.
 
-      server.login(sender_email, password)
-      server.sendmail(sender_email, receiver_email, msg.as_string())
+            server.login(sender_email, password)
+            server.sendmail(sender_email, receiver_email, msg.as_string())
 
-    print("Email sent successfully!")
+        print("Email sent successfully!")
 
-  except Exception as e:
-    print(f"Error sending email: {e}")
+    except Exception as e:
+        print(f"Error sending email: {e}")
+
+
+def csv_to_html(input_file):
+    """Read CSV file and return it as a html data for mail"""
+
+    with open(input_file, 'r') as csv_file:
+        csv_reader = csv.reader(csv_file)
+
+        # Start the HTML table
+        html_output = "<table border='1'>\n"
+
+        # Read each row of the CSV file
+        for row in csv_reader:
+            html_output += "  <tr>\n"
+            for item in row:
+                html_output += f"    <td>{item}</td>\n"
+            html_output += "  </tr>\n"
+
+        # Close the HTML table
+        html_output += "</table>"
+    return html_output
