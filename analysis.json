@@ -23,5 +23,6 @@
   "Patterns": {},
   "Cycles": {},
   "Sentiment": {},
-  "Period": "1y"
+  "Period": "3mo",
+  "Position": ["AAPL", "TSLA", "VT", "CRWD", "NOK", "NVDA", "CRM"]
 }

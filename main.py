@@ -124,12 +124,15 @@ def main():
 
         # Send Email
         if args.email:
-            report_data = csv_to_html(report_name)
+            report_data = csv_to_html(report_name, position=analysis_settings['Position'])
 
-            body = f"<html><body><h2>Daily Stock Report</h2>" \
-                   f"<h3>Trend Analysis</h3>\
-                    {report_data}\
-                    </body></html>"
+            body = f"""<html> \
+                   <head>
+                    </head> 
+                   <body><h2>Daily Stock Report</h2> 
+                   <h3>Trend Analysis</h3>
+                    {report_data}
+                    </body></html>"""
 
             send_html_email(sender_email=settings['Email']['from_email'], receiver_email=args.email,
                             subject=f"Stock Analysis {current_date}",
@@ -141,11 +144,6 @@ def main():
             print("No results to send via email.")
     except Exception as e:
         print(f"Error: {e}")
-
-
-
-
-
 
 
 if __name__ == "__main__":
