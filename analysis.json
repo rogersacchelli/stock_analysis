@@ -14,6 +14,13 @@
       "long": 20,
       "short": 5,
       "eval_window": 5
+    },
+    "bollinger_bands": {
+      "enabled": 1,
+      "avg_type": "sma",
+      "period": 20,
+      "eval_window": 3,
+      "std_dev": 2
     }
   },
   "Momentum": {},
@@ -24,5 +31,6 @@
   "Cycles": {},
   "Sentiment": {},
   "Period": "3mo",
-  "Position": ["AAPL", "TSLA", "VT", "CRWD", "NOK", "NVDA", "CRM"]
+  "Position": ["AAPL", "TSLA", "VT", "CRWD", "NOK", "NVDA", "CRM"],
+  "Observation": ["MSFT", "NVDA", "PLTR"]
 }

@@ -3,11 +3,11 @@ from datetime import datetime, timedelta
 import os
 import argparse
 import pandas as pd
-from trend import detect_crossings
+from trend import detect_crossings, detect_bollinger_crossings
 from utils.analysis import analysis_to_file
 from utils.email import send_html_email, csv_to_html
 from utils.loadSettings import LoadFromFile
-from utils.utils import get_report_hash
+from utils.utils import get_report_hash, log_error
 
 pd.options.mode.chained_assignment = None
 
@@ -23,23 +23,7 @@ def fetch_stock_data(ticker, period="1y"):
 
 
 # Function to read tickers from a file
-def read_tickers_from_file(file_path):
-    """Read stock tickers from a text file."""
-    if not os.path.exists(file_path):
-        raise FileNotFoundError(f"File not found: {file_path}")
-    with open(file_path, 'r') as file:
-        tickers = [line.split(',')[0].strip().upper() for line in file if line.strip()]
-    return tickers
 
-
-# Function to log errors
-def log_error(message, logfile):
-    """Log errors to the error log file."""
-    with open(logfile, 'a') as log_file:
-        log_file.write(message + '\n')
-
-
-# Main function
 def main():
     parser = argparse.ArgumentParser(description="Analyze stock crossings of moving averages.")
     parser.add_argument('-i', '--input', required=True, action=LoadFromFile,
@@ -63,6 +47,10 @@ def main():
         log_file = f"logs/{report_hash}.log"
         analysis_data = {}
 
+        print(f"--------------------------------------------------------\n"
+              f"Starting Report {report_hash}\n"
+              f"--------------------------------------------------------\n")
+
         for ticker_code in ticker_list:
             ticker = ticker_code['Code']
             print(f"Analyzing {ticker}...")
@@ -71,8 +59,9 @@ def main():
                 stock_data = fetch_stock_data(ticker, period=analysis_settings['Period'])
             except Exception as e:
                 # Skip to next Ticket
-                print(str(e))
-                log_error(str(e), log_file)
+                error_message = f"Error fetching data for {ticker} - {str(e)}"
+                print(str(error_message))
+                log_error(error_message, log_file)
                 continue
 
             if analysis_settings['Trend']['sma_cross']['enabled']:
@@ -91,7 +80,7 @@ def main():
                             analysis_data.update({ticker: {}})
 
                         analysis_data[ticker].update({'sma_cross': {"date": crossings['Date'].values[0],
-                                                                    "cross": crossings["Cross"].values[0]}})
+                                                                    "recommendation": crossings["Cross"].values[0]}})
                     else:
                         print(f"No SMA crossings detected for {ticker}.")
                 except Exception as e:
@@ -111,7 +100,7 @@ def main():
                         print(f"Crossings found for {ticker}. Saving to analysis file.")
                         crossings.index = [ticker] * len(crossings)
                         analysis_data[ticker].update({'ema_cross': {"date": crossings['Date'].values[0],
-                                                                    "cross": crossings["Cross"].values[0]}})
+                                                                    "recommendation": crossings["Cross"].values[0]}})
                     else:
                         print(f"No EMA crossings detected for {ticker}.")
                 except Exception as e:
@@ -119,8 +108,38 @@ def main():
                     print(error_message)
                     log_error(error_message, log_file)
 
+            if analysis_settings['Trend']['bollinger_bands']['enabled']:
+                # Detect Price touches on lower or upper band
+                try:
+                    bands_touch = detect_bollinger_crossings(stock_data=stock_data,
+                                        period=analysis_settings['Trend']['bollinger_bands']['period'],
+                                        eval_window=analysis_settings['Trend']['bollinger_bands']['eval_window'],
+                                        average_type=analysis_settings['Trend']['bollinger_bands']['avg_type'],
+                                        std_dev=analysis_settings['Trend']['bollinger_bands']['std_dev'])
+
+                    if not bands_touch['LowerTouch'].empty:
+                        # Buy Opportunity
+                        try:
+                            analysis_data[ticker]
+                        except:
+                            analysis_data.update({ticker: {}})
+                        analysis_data[ticker].update({"bollinger_bands": {"recommendation": "Buy"}})
+                    elif not bands_touch['UpperTouch'].empty:
+                        # Sell Opportunity
+                        try:
+                            analysis_data[ticker]
+                        except:
+                            analysis_data.update({ticker: {}})
+                        analysis_data[ticker].update({"bollinger_bands": {"recommendation": "Sell"}})
+                    else:
+                        print(f"No bands crossing detected for {ticker}")
+
+                except Exception as e:
+                    print(str(e))
+                    log_error(str(e), log_file)
+
         # Create Report File
-        analysis_to_file(analysis_data, analysis_settings, report_name)
+        analysis_to_file(analysis_data, analysis_settings, report_hash)
 
         # Send Email
         if args.email:
@@ -143,7 +162,7 @@ def main():
         else:
             print("No results to send via email.")
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Error: {str(e)}")
 
 
 if __name__ == "__main__":
