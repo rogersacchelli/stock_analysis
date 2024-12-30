@@ -21,6 +21,11 @@
       "period": 20,
       "eval_window": 3,
       "std_dev": 2
+    },
+    "week_rule": {
+      "enabled": 1,
+      "period": 4,
+      "eval_window": 5
     }
   },
   "Momentum": {},

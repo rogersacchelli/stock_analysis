@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 import os
 import argparse
 import pandas as pd
-from trend import detect_crossings, detect_bollinger_crossings
+from trend import detect_crossings, detect_bollinger_crossings, detect_wr_crossings
 from utils.analysis import analysis_to_file
 from utils.email import send_html_email, csv_to_html
 from utils.loadSettings import LoadFromFile
@@ -31,6 +31,7 @@ def main():
     parser.add_argument('-e', '--email', help="Email address to send results.")
     parser.add_argument('-c', '--config', required=True, action=LoadFromFile, help="Configuration File.")
     parser.add_argument('-a', '--analysis', required=True, action=LoadFromFile, help="Analysis Definition File.")
+    parser.add_argument('-l', '--limit', type=int, default=50, help="Limit the number of stocks processed.")
     args = parser.parse_args()
 
     settings = args.config
@@ -76,7 +77,7 @@ def main():
                         crossings.index = [ticker] * len(crossings)
                         try:
                             analysis_data[ticker]
-                        except:
+                        except KeyError:
                             analysis_data.update({ticker: {}})
 
                         analysis_data[ticker].update({'sma_cross': {"date": crossings['Date'].values[0],
@@ -121,23 +122,54 @@ def main():
                         # Buy Opportunity
                         try:
                             analysis_data[ticker]
-                        except:
+                        except KeyError:
                             analysis_data.update({ticker: {}})
                         analysis_data[ticker].update({"bollinger_bands": {"recommendation": "Buy"}})
                     elif not bands_touch['UpperTouch'].empty:
                         # Sell Opportunity
                         try:
                             analysis_data[ticker]
-                        except:
+                        except KeyError:
                             analysis_data.update({ticker: {}})
                         analysis_data[ticker].update({"bollinger_bands": {"recommendation": "Sell"}})
                     else:
                         print(f"No bands crossing detected for {ticker}")
-
                 except Exception as e:
                     print(str(e))
                     log_error(str(e), log_file)
 
+            if analysis_settings['Trend']['week_rule']['enabled']:
+                try:
+                    wr_crossing = detect_wr_crossings(stock_data=stock_data,
+                                    period=analysis_settings['Trend']['week_rule']['period'],
+                                    eval_window=analysis_settings['Trend']['week_rule']['eval_window'])
+
+                    if not wr_crossing['Buy'].empty:
+                        # Buy Opportunity
+                        try:
+                            analysis_data[ticker]
+                        except KeyError:
+                            analysis_data.update({ticker: {}})
+                        analysis_data[ticker].update({"week_rule": {"recommendation": "Buy"}})
+
+                    elif not wr_crossing['Sell'].empty:
+                        # Sell Opportunity
+                        try:
+                            analysis_data[ticker]
+                        except KeyError:
+                            analysis_data.update({ticker: {}})
+                        analysis_data[ticker].update({"week_rule": {"recommendation": "Sell"}})
+                    else:
+                        print(f"No WR crossing detected for {ticker}")
+
+                except Exception as e:
+                    error_message = f"{str(e)} handling Week Rule for "
+                    print(error_message)
+                    log_error(error_message, log_file)
+
+            # Break loop if limit is exceeded
+            if args.limit == 0:
+                break
         # Create Report File
         analysis_to_file(analysis_data, analysis_settings, report_hash)
 

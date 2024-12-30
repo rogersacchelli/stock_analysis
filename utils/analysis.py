@@ -21,8 +21,8 @@ def analysis_to_file(analysis_data, analysis_settings, report_rash):
                          f"{analysis_settings['Trend'][trend]['long']}"
                 header_cfg.update({trend: col})
                 col += 1
-            elif trend == "bollinger_bands":
-                header = f"{header},{trend.upper()} {analysis_settings['Trend'][trend]['eval_window']}"
+            else :
+                header = f"{header},{analysis_settings['Trend'][trend]['period']} {trend.upper()}"
                 header_cfg.update({trend: col})
                 col += 1
 

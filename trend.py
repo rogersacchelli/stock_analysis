@@ -69,3 +69,23 @@ def detect_bollinger_crossings(stock_data, period, average_type, eval_window, st
     bb_lowertouch = stock_data[(stock_data['Close'] <= stock_data['LowerBand']) & (stock_data['Date'] >= cutoff_date)]
 
     return {"UpperTouch": bb_uppertouch, "LowerTouch": bb_lowertouch}
+
+def detect_wr_crossings(stock_data, period, eval_window):
+    
+
+    # Calculate prior 4-week highs and lows (shifted by 1 day)
+    stock_data[f"{period}W_High"] = stock_data['High'].rolling(window=period * 5).max().shift(1)
+    stock_data[f"{period}W_Low"] = stock_data['Low'].rolling(window=period * 5).min().shift(1)
+
+    today = np.datetime64('today', 'D')
+    cutoff_date = today - np.timedelta64(eval_window, 'D')
+
+    # Reset the index to ensure Date is a column
+    stock_data.reset_index(inplace=True)
+
+    # Detect touches
+    wr_upper = stock_data[(stock_data['Close'] > stock_data[f"{period}W_High"]) & (stock_data['Date'] >= cutoff_date)]
+    wr_lower = stock_data[(stock_data['Close'] < stock_data[f"{period}W_Low"]) & (stock_data['Date'] >= cutoff_date)]
+
+    # Return crossings
+    return {"Buy": wr_upper, "Sell": wr_lower}
