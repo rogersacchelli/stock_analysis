@@ -1,9 +1,8 @@
 import yfinance as yf
-from datetime import datetime, timedelta
-import os
+from datetime import datetime
 import argparse
 import pandas as pd
-from trend import detect_crossings, detect_bollinger_crossings, detect_wr_crossings
+from trend import detect_crossings, detect_bollinger_crossings, detect_wr_crossings, detect_macd_trend
 from utils.analysis import analysis_to_file
 from utils.email import send_html_email, csv_to_html
 from utils.loadSettings import LoadFromFile
@@ -40,7 +39,6 @@ def main():
     try:
         ticker_list = args.input
 
-        # Get current date and time in the format YYYY-MM-DDTHH:MM:SS
         current_datetime = datetime.now().strftime('%Y-%m-%dT%H-%M-%S')
         current_date = datetime.now().strftime('%d/%m/%Y')
         report_hash = get_report_hash(f"{args.email}" + str(analysis_settings) + current_datetime + str(args.input))
@@ -67,10 +65,10 @@ def main():
 
             if analysis_settings['Trend']['sma_cross']['enabled']:
                 try:
-                    crossings = detect_crossings(stock_data,
+                    crossings = detect_crossings(stock_data=stock_data,
                                                  short_window=analysis_settings['Trend']['sma_cross']['short'],
                                                  long_window=analysis_settings['Trend']['sma_cross']['long'],
-                                                 eval_window=analysis_settings['Trend']['sma_cross']['eval_window'],
+                                                 output_window=analysis_settings['Trend']['sma_cross']['output_window'],
                                                  average_type="SMA")
                     if not crossings.empty:
                         print(f"Crossings found for {ticker}. Saving to analysis file.")
@@ -92,10 +90,10 @@ def main():
             if analysis_settings['Trend']['ema_cross']['enabled']:
 
                 try:
-                    crossings = detect_crossings(stock_data,
+                    crossings = detect_crossings(stock_data=stock_data,
                                                  short_window=analysis_settings['Trend']['ema_cross']['short'],
                                                  long_window=analysis_settings['Trend']['ema_cross']['long'],
-                                                 eval_window=analysis_settings['Trend']['ema_cross']['eval_window'],
+                                                 output_window=analysis_settings['Trend']['ema_cross']['output_window'],
                                                  average_type="EMA")
                     if not crossings.empty:
                         print(f"Crossings found for {ticker}. Saving to analysis file.")
@@ -114,7 +112,7 @@ def main():
                 try:
                     bands_touch = detect_bollinger_crossings(stock_data=stock_data,
                                         period=analysis_settings['Trend']['bollinger_bands']['period'],
-                                        eval_window=analysis_settings['Trend']['bollinger_bands']['eval_window'],
+                                        output_window=analysis_settings['Trend']['bollinger_bands']['output_window'],
                                         average_type=analysis_settings['Trend']['bollinger_bands']['avg_type'],
                                         std_dev=analysis_settings['Trend']['bollinger_bands']['std_dev'])
 
@@ -140,9 +138,10 @@ def main():
 
             if analysis_settings['Trend']['week_rule']['enabled']:
                 try:
-                    wr_crossing = detect_wr_crossings(stock_data=stock_data,
+                    data = stock_data
+                    wr_crossing = detect_wr_crossings(stock_data=data,
                                     period=analysis_settings['Trend']['week_rule']['period'],
-                                    eval_window=analysis_settings['Trend']['week_rule']['eval_window'])
+                                    output_window=analysis_settings['Trend']['week_rule']['output_window'])
 
                     if not wr_crossing['Buy'].empty:
                         # Buy Opportunity
@@ -164,6 +163,38 @@ def main():
 
                 except Exception as e:
                     error_message = f"{str(e)} handling Week Rule for "
+                    print(error_message)
+                    log_error(error_message, log_file)
+
+            if analysis_settings['Trend']['macd']['enabled']:
+                try:
+                    macd_crossings = detect_macd_trend(stock_data,
+                                                   short_window=analysis_settings['Trend']['macd']['short'],
+                                                   long_window=analysis_settings['Trend']['macd']['long'],
+                                                   signal_window=analysis_settings['Trend']['macd']['signal_window'],
+                                                   output_window=analysis_settings['Trend']['macd']['output_window'],
+                                                   lower_thold=analysis_settings['Trend']['macd']['lower_thold'],
+                                                   upper_thold=analysis_settings['Trend']['macd']['upper_thold'])
+                    if not macd_crossings['Buy'].empty:
+                        # Buy Opportunity
+                        try:
+                            analysis_data[ticker]
+                        except KeyError:
+                            analysis_data.update({ticker: {}})
+                        analysis_data[ticker].update({"macd": {"recommendation": "Buy"}})
+
+                    elif not wr_crossing['Sell'].empty:
+                        # Sell Opportunity
+                        try:
+                            analysis_data[ticker]
+                        except KeyError:
+                            analysis_data.update({ticker: {}})
+                        analysis_data[ticker].update({"macd": {"recommendation": "Sell"}})
+                    else:
+                        print(f"No MACD crossing detected for {ticker}")
+
+                except Exception as e:
+                    error_message = f"Error {e}, handling MACD analysis for {ticker}"
                     print(error_message)
                     log_error(error_message, log_file)
 

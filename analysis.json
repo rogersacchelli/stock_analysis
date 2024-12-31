@@ -7,28 +7,39 @@
       "enabled": 1,
       "long": 20,
       "short": 5,
-      "eval_window": 5
+      "output_window": 5
     },
     "ema_cross": {
       "enabled": 1,
       "long": 20,
       "short": 5,
-      "eval_window": 5
+      "output_window": 5
     },
     "bollinger_bands": {
       "enabled": 1,
       "avg_type": "sma",
       "period": 20,
-      "eval_window": 3,
+      "output_window": 3,
       "std_dev": 2
     },
     "week_rule": {
       "enabled": 1,
       "period": 4,
-      "eval_window": 5
+      "output_window": 5
+    },
+    "macd": {
+      "enabled": 1,
+      "average_type": "ema",
+      "short": 5,
+      "long": 20,
+      "signal_window": 9,
+      "output_window": 5,
+      "lower_thold": -4.0,
+      "upper_thold": 4.0
     }
   },
-  "Momentum": {},
+  "Momentum": {
+      },
   "Volume": {},
   "Sup/Res": {},
   "Volatility": {},

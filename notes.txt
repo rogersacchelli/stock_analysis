@@ -5,4 +5,4 @@ observe for taking action of Buying or Selling. The correct moment to engage is 
 the trend.
 
 In the case of a stock price touching the Bollinger Band at its upper bound, determining if is good selling signal
-depends of the momentum provided. MACD can be a good indication for it
+depends on the momentum provided. MACD can be a good indication for it

@@ -19,12 +19,15 @@ def analysis_to_file(analysis_data, analysis_settings, report_rash):
             if trend == "sma_cross" or trend == "ema_cross":
                 header = f"{header},{trend.upper()} {analysis_settings['Trend'][trend]['short']}/" \
                          f"{analysis_settings['Trend'][trend]['long']}"
-                header_cfg.update({trend: col})
-                col += 1
-            else :
+
+            elif trend == "bollinger_bands" or trend == "week_rule":
                 header = f"{header},{analysis_settings['Trend'][trend]['period']} {trend.upper()}"
-                header_cfg.update({trend: col})
-                col += 1
+
+            elif trend == "macd":
+                header = f"{header},{analysis_settings['Trend'][trend]['signal_window']} {trend.upper()}"
+
+            header_cfg.update({trend: col})
+            col += 1
 
         f.write(header + '\n')
 
