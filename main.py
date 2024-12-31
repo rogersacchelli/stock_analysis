@@ -199,8 +199,10 @@ def main():
                     log_error(error_message, log_file)
 
             # Break loop if limit is exceeded
+            args.limit -= 1
             if args.limit == 0:
                 break
+
         # Create Report File
         analysis_to_file(analysis_data, analysis_settings, report_hash)
 

@@ -7,25 +7,29 @@
       "enabled": 1,
       "long": 20,
       "short": 5,
-      "output_window": 5
+      "output_window": 5,
+      "weight": 1.0
     },
     "ema_cross": {
       "enabled": 1,
       "long": 20,
       "short": 5,
-      "output_window": 5
+      "output_window": 5,
+      "weight": 1.0
     },
     "bollinger_bands": {
       "enabled": 1,
       "avg_type": "sma",
       "period": 20,
       "output_window": 3,
-      "std_dev": 2
+      "std_dev": 2,
+      "weight": 3.0
     },
     "week_rule": {
       "enabled": 1,
       "period": 4,
-      "output_window": 5
+      "output_window": 5,
+      "weight": 1.0
     },
     "macd": {
       "enabled": 1,
@@ -35,11 +39,11 @@
       "signal_window": 9,
       "output_window": 5,
       "lower_thold": -4.0,
-      "upper_thold": 4.0
+      "upper_thold": 4.0,
+      "weight": 2.0
     }
   },
-  "Momentum": {
-      },
+  "Momentum": {},
   "Volume": {},
   "Sup/Res": {},
   "Volatility": {},
@@ -48,5 +52,8 @@
   "Sentiment": {},
   "Period": "3mo",
   "Position": ["AAPL", "TSLA", "VT", "CRWD", "NOK", "NVDA", "CRM"],
-  "Observation": ["MSFT", "NVDA", "PLTR"]
+  "Observation": ["MSFT", "NVDA", "PLTR"],
+  "Thresholds": {
+    "Trend": {"Buy": 0.5, "Sell": -0.5}
+  }
 }
