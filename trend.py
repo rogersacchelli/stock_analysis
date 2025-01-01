@@ -12,7 +12,7 @@ def calculate_sma(data, window=5):
     return data.rolling(window=window).mean()
 
 
-def detect_crossings(stock_data, short_window, long_window, output_window, average_type):
+def detect_ma_crossings(stock_data, short_window, long_window, output_window, average_type='SMA'):
     """Detect days where SMA crosses."""
 
     if average_type == "SMA":
