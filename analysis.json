@@ -1,6 +1,6 @@
 {
   "Stocks": {
-    "Tickers": "AMD,ABBV,ALB,AAL,CPB,TSLA"
+    "Tickers": "AMD, ABBV, ALB, AAL, CPB, TSLA"
   },
   "Trend": {
     "sma_cross": {
@@ -54,6 +54,6 @@
   "Position": ["AAPL", "TSLA", "VT", "CRWD", "NOK", "NVDA", "CRM"],
   "Observation": ["MSFT", "NVDA", "PLTR"],
   "Thresholds": {
-    "Trend": {"Buy": 0.5, "Sell": -0.5}
+    "Trend": {"Buy": 0.5, "Sell": -0.3}
   }
 }

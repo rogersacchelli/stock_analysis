@@ -3,7 +3,8 @@ import os
 import argparse
 from datetime import datetime
 
-def get_report_hash(data):
+
+def get_hash(data):
 
     md5_hash = hashlib.md5()
     # Update the hash object with the bytes of the data
@@ -38,3 +39,9 @@ def valid_date(s: str) -> datetime or None:
     except ValueError:
         raise argparse.ArgumentTypeError(f"not a valid date: {s!r}")
 
+
+def search_file(directory, filename):
+    for root, dirs, files in os.walk(directory):
+        if filename in files:
+            return os.path.join(root, filename)
+    return None
