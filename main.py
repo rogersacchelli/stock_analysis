@@ -45,6 +45,7 @@ def main():
     try:
 
         # Run Analysis
+        analysis_data = {}
         if args.backtest:
             # If required backtest and no dates provided, default to last one year
             if args.bt_start_date is None:
@@ -59,7 +60,6 @@ def main():
                                                      start_date=backtest_stock_selection_dates[0],
                                                      end_date=backtest_stock_selection_dates[1])
 
-
             backtest_result = backtest(analysis_data=analysis_data, start_date=args.bt_start_date,
                                        end_date=args.bt_end_date, setup=setup, report_hash=report_hash)
 
@@ -68,7 +68,8 @@ def main():
                              report_hash=report_hash)
 
         else:
-            analysis_data = select_stocks_from_setup(ticker_list, setup, limit, report_hash)
+            analysis_data = select_stocks_from_setup(ticker_list, setup, limit, report_hash,
+                                                     start_date=None, end_date=None)
 
         # Save Analysis to Report File
         analysis_to_file(analysis_data, setup, report_hash)

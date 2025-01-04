@@ -9,10 +9,10 @@ from utils.utils import get_hash, search_file
 def fetch_yahoo_stock_data(ticker, start_date, end_date, period="1y"):
     """Fetch historical stock data for the given ticker."""
 
-    if end_date is None:
+    if start_date is None:
         # if end_date is None, it means the latest data during the period selected, so use start_date as period
         stock_data = load_pickled_stock_data(ticker=ticker, start_date=period,
-                                             end_date=datetime.datetime.now().strftime("%Y-%m-%d"))
+                                             end_date=end_date)
 
         # If no pickled data is found, then download it
         if stock_data is None:

@@ -102,8 +102,7 @@ def detect_wr_crossings(stock_data, period, end_date, output_window):
         return crossings
 
 
-def detect_macd_trend(stock_data, short_window, long_window, signal_window, output_window, end_date, lower_thold,
-                      upper_thold):
+def detect_macd_trend(stock_data, short_window, long_window, signal_window, output_window, end_date):
     """
         Calculate MACD and Signal Line using SMA instead of EMA.
     """
@@ -116,13 +115,21 @@ def detect_macd_trend(stock_data, short_window, long_window, signal_window, outp
     stock_data[f"MACD_SIGNAL_{signal_window}"] = stock_data[f"MACD_{short_window}_{long_window}"].rolling(window=
                                                                                                 signal_window).mean()
 
-    #TODO: Especify a correct metric for MACD threshold
-    stock_data["MACD_LOWER_THOLD"] = lower_thold
-    stock_data["MACD_UPPER_THOLD"] = upper_thold
+    stock_data[f"MACD_Prev_{short_window}_{long_window}"] = stock_data[f"MACD_{short_window}_{long_window}"].shift(1)
+    stock_data[f"MACD_Prev_SIGNAL_{signal_window}"] = stock_data[f"MACD_SIGNAL_{signal_window}"].shift(1)
 
-    stock_data['Cross'] = stock_data.apply(
-        lambda row: 'Buy' if row['Close'] >= row['MACD_LOWER_THOLD'] else (
-            'Sell' if row['Close'] >= row['MACD_UPPER_THOLD'] else None), axis=1)
+    # Identify crossing points
+    stock_data['Cross'] = np.where(
+        (stock_data[f"MACD_Prev_{short_window}_{long_window}"] <= stock_data[f"MACD_Prev_SIGNAL_{signal_window}"]) &
+        (stock_data[f"MACD_{short_window}_{long_window}"] > stock_data[f"MACD_SIGNAL_{signal_window}"]),
+        'Buy',
+        np.where(
+            (stock_data[f"MACD_Prev_{short_window}_{long_window}"] >= stock_data[f"MACD_Prev_SIGNAL_{signal_window}"]) &
+            (stock_data[f"MACD_{short_window}_{long_window}"] < stock_data[f"MACD_SIGNAL_{signal_window}"]),
+            'Sell',
+            None
+        )
+    )
 
     crossings = stock_data[stock_data['Cross'].notna()]
     crossings = crossings.reset_index()  # Reset index to access the Date column

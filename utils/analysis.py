@@ -10,6 +10,9 @@ def select_stocks_from_setup(stock_list, setup, limit, report_hash, start_date, 
     analysis_data = {}
     log_file = f"logs/{report_hash}.log"
 
+    if end_date is None:
+        end_date = datetime.now().strftime("%Y-%m-%d")
+
     for ticker_code in stock_list:
         ticker = ticker_code['Code']
         print(f"Analyzing {ticker}...")
@@ -58,9 +61,7 @@ def select_stocks_from_setup(stock_list, setup, limit, report_hash, start_date, 
                                                            long_window=setup['Trend'][analysis]['long'],
                                                            signal_window=setup['Trend'][analysis]['signal_window'],
                                                            output_window=setup['Trend'][analysis]['output_window'],
-                                                           end_date=end_date,
-                                                           lower_thold=setup['Trend'][analysis]['lower_thold'],
-                                                           upper_thold=setup['Trend'][analysis]['upper_thold'])
+                                                           end_date=end_date)
 
                     # Add analysis to be computed on total result
                     total_score += setup['Trend'][analysis]['weight']
@@ -235,9 +236,8 @@ def analysis_to_file(analysis_data, setup, report_hash):
     # Output file based on user settings
     with open(f"reports/{report_hash}.csv", mode='a') as f:
 
-        header = "Ticker, Report Date"
-        header_cfg = {}
-        col = 0
+        header = "Ticker,Report Date"
+
         trend_total_weight = 0.0
         # Create Header based on analysis settings
         for trend in setup['Trend'].keys():
@@ -250,9 +250,6 @@ def analysis_to_file(analysis_data, setup, report_hash):
 
             elif trend == "macd":
                 header = f"{header},{setup['Trend'][trend]['signal_window']} {trend.upper()}"
-            trend_total_weight += setup['Trend'][trend]['weight']
-            header_cfg.update({trend: col})
-            col += 1
 
         f.write(header + '\n')
 
@@ -260,16 +257,11 @@ def analysis_to_file(analysis_data, setup, report_hash):
         for ticker in analysis_data.keys():
 
             analysis_output = f"{ticker},{current_date}"
-            ticker_score = 0.0
 
             for analysis in setup['Trend'].keys():
                 try:
-                    recommendation = analysis_data[ticker][analysis]['recommendation']
+                    recommendation = analysis_data[ticker][analysis]['Cross'].values[0]
                     analysis_output += f",{recommendation}"
-                    if recommendation == 'Buy':
-                        ticker_score += setup['Trend'][analysis]['weight']
-                    else:
-                        ticker_score -= setup['Trend'][analysis]['weight']
 
                 except KeyError as ke:
                     error_message = f"No {str(ke)} analysis found for {ticker}"
@@ -277,20 +269,17 @@ def analysis_to_file(analysis_data, setup, report_hash):
                     log_error(error_message, f"logs/{report_hash}.log")
                     analysis_output += ","
 
-            ticker_final_score = ticker_score / trend_total_weight
-            if (ticker_final_score >= setup['Thresholds']['Trend']['Buy'] or
-                    ticker_final_score <= setup['Thresholds']['Trend']['Sell']):
-                f.write(analysis_output + '\n')
-            else:
-                print(
-                    f"{ticker} not included since its score {ticker_final_score} does not meet threshold settings.")
+            #ticker_final_score = ticker_score / trend_total_weight
+            #if (ticker_final_score >= setup['Thresholds']['Trend']['Buy'] or
+            #        ticker_final_score <= setup['Thresholds']['Trend']['Sell']):
+            f.write(analysis_output + '\n')
 
         f.close()
 
 
 def backtest_to_file(analysis_data, backtest_data, setup, report_hash):
 
-    with open(f"reports/backtest_{report_hash}.csv", mode='a') as f:
+    with open(f"reports/{report_hash}.bt", mode='a') as f:
         header = "Ticker,Recommendation"
         for trend in setup['Trend'].keys():
             if setup['Trend'][trend]['enabled']:
