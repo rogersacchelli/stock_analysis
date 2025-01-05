@@ -45,3 +45,19 @@ def search_file(directory, filename):
         if filename in files:
             return os.path.join(root, filename)
     return None
+
+
+import os
+
+
+def create_directories_if_not_exist(path):
+    """
+    Creates the specified directory path if it does not exist.
+
+    Args:
+    path (str): The directory path to create.
+    """
+    # Check if the directory exists, if not, create it
+    if not os.path.exists(path):
+        os.makedirs(path)
+        print(f"Directory '{path}' created successfully.")

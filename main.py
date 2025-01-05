@@ -5,7 +5,7 @@ import pandas as pd
 from utils.analysis import analysis_to_file, select_stocks_from_setup, backtest, get_backtest_dates, backtest_to_file
 from utils.email import send_html_email, csv_to_html
 from utils.loadSettings import LoadFromFile
-from utils.utils import get_hash, log_error, valid_date
+from utils.utils import get_hash, log_error, valid_date, create_directories_if_not_exist
 
 pd.options.mode.chained_assignment = None
 
@@ -30,6 +30,13 @@ def main():
     setup = args.analysis
     ticker_list = args.input
     limit = args.limit
+
+    # Create required dirs if not exist
+
+    # Example usage
+    create_directories_if_not_exist("reports")
+    create_directories_if_not_exist("logs")
+    create_directories_if_not_exist("ticker_data")
 
     current_datetime = datetime.now().strftime('%Y-%m-%dT%H-%M-%S')
     current_date = datetime.now().strftime('%d/%m/%Y')
@@ -92,8 +99,6 @@ def main():
                             smtp_server=config['Email']['smtp_server'],
                             smtp_port=config['Email']['smtp_port'],
                             password=config['Email']['from_password'])
-
-            # TODO: Send backtest result to mail
 
         else:
             print("No results to send via email.")

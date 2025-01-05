@@ -1,7 +1,4 @@
-import pandas as pd
-import yfinance as yf
 import numpy as np
-from datetime import datetime, timedelta
 
 
 def calculate_ema(data, period=14):
@@ -10,6 +7,39 @@ def calculate_ema(data, period=14):
 
 def calculate_sma(data, window=5):
     return data.rolling(window=window).mean()
+
+
+def detect_long_term_crossings(stock_data, period, output_window, end_date, average_type='SMA'):
+    if average_type == "SMA":
+        stock_data[f"LT_MA_{period}"] = calculate_sma(stock_data['Close'], period)
+    else:
+        stock_data[f"LT_MA_{period}"] = calculate_ema(stock_data['Close'], period)
+
+    stock_data[f"Prev_Close"] = stock_data[f"Close"].shift(1)
+    stock_data[f"Prev_LT_MA_{period}"] = stock_data[f"LT_MA_{period}"].shift(1)
+
+    stock_data['Cross'] = np.where(
+        (stock_data[f"Prev_Close"] <= stock_data[f"Prev_LT_MA_{period}"]) &
+        (stock_data[f"Close"] > stock_data[f"LT_MA_{period}"]), 'Buy',
+        np.where(
+            (stock_data[f"Prev_Close"] >= stock_data[f"Prev_LT_MA_{period}"]) & (
+                    stock_data[f"Close"] < stock_data[f"LT_MA_{period}"]), 'Sell',
+            None
+        )
+    )
+
+    # Add a Date column and filter rows with crossings
+    crossings = stock_data[stock_data['Cross'].notna()]
+    crossings = crossings.reset_index()  # Reset index to access the Date column
+
+    if output_window:
+        today = np.datetime64(end_date)
+
+        cutoff_date = today - np.timedelta64(output_window, 'D')
+        last_crossing = crossings[crossings['Date'] >= cutoff_date].sort_values(by='Date').tail(1)
+        return last_crossing
+    else:
+        return crossings
 
 
 def detect_ma_crossings(stock_data, short_window, long_window, output_window, end_date, average_type='SMA'):
@@ -26,6 +56,7 @@ def detect_ma_crossings(stock_data, short_window, long_window, output_window, en
     stock_data[f"Prev_{average_type}_CROSS_{short_window}"] = stock_data[f"{average_type}_CROSS_{short_window}"].shift(
         1)
     stock_data[f"Prev_{average_type}_CROSS_{long_window}"] = stock_data[f"{average_type}_CROSS_{long_window}"].shift(1)
+
     stock_data['Cross'] = np.where(
         (stock_data[f"Prev_{average_type}_CROSS_{short_window}"] <= stock_data[
             f"Prev_{average_type}_CROSS_{long_window}"]) & (

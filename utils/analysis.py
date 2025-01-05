@@ -3,6 +3,7 @@ from data_aquisition import fetch_yahoo_stock_data
 from dateutil.relativedelta import relativedelta
 from collections import defaultdict
 from trend import *
+from datetime import datetime
 
 
 def select_stocks_from_setup(stock_list, setup, limit, report_hash, start_date, end_date):
@@ -37,13 +38,23 @@ def select_stocks_from_setup(stock_list, setup, limit, report_hash, start_date, 
 
             if setup['Trend'][analysis]['enabled']:
                 try:
+                    if analysis == "long_term":
+                        crossings = detect_long_term_crossings(stock_data=stock_data,
+                                                        period=setup['Trend'][analysis]['period'],
+                                                        output_window=setup['Trend'][analysis]['output_window'],
+                                                        end_date=end_date,
+                                                        average_type="SMA" if
+                                                            setup['Trend'][analysis]['avg_type'] == 'sma' else "EMA")
+
                     if analysis == "sma_cross" or analysis == "ema_cross":
+
                         crossings = detect_ma_crossings(stock_data=stock_data,
-                                                     short_window=setup['Trend']['sma_cross']['short'],
-                                                     long_window=setup['Trend']['sma_cross']['long'],
-                                                     output_window=setup['Trend']['sma_cross']['output_window'],
-                                                     end_date=end_date,
-                                                     average_type="SMA" if analysis == 'sma_cross' else "EMA")
+                                                         short_window=setup['Trend']['sma_cross']['short'],
+                                                         long_window=setup['Trend']['sma_cross']['long'],
+                                                         output_window=setup['Trend']['sma_cross']['output_window'],
+                                                         end_date=end_date,
+                                                         average_type="SMA" if analysis == 'sma_cross' else "EMA")
+
                     elif analysis == "bollinger_bands":
                         crossings = detect_bollinger_crossings(stock_data=stock_data,
                                          period=setup['Trend'][analysis]['period'], 
@@ -55,6 +66,7 @@ def select_stocks_from_setup(stock_list, setup, limit, report_hash, start_date, 
                         crossings = detect_wr_crossings(stock_data=stock_data,
                                                        period=setup['Trend']['week_rule']['period'], end_date=end_date,
                                                        output_window=setup['Trend']['week_rule']['output_window'])
+
                     elif analysis == "macd":
                         crossings = detect_macd_trend(stock_data,
                                                            short_window=setup['Trend'][analysis]['short'],
@@ -67,7 +79,7 @@ def select_stocks_from_setup(stock_list, setup, limit, report_hash, start_date, 
                     total_score += setup['Trend'][analysis]['weight']
 
                     if not crossings.empty:
-                        print(f"Crossings found for {ticker} using {analysis}. Saving analysis file.")
+                        print(f"Crossings found for {ticker} using {analysis}.")
                         crossings.index = [ticker] * len(crossings)
                         try:
                             analysis_data[ticker]
@@ -76,7 +88,7 @@ def select_stocks_from_setup(stock_list, setup, limit, report_hash, start_date, 
     
                         analysis_data[ticker].update({analysis: crossings})
                         if crossings['Cross'].values[0] == "Sell":
-                            ticker_score += setup['Trend'][analysis]['weight']
+                            ticker_score -= setup['Trend'][analysis]['weight']
                         else:
                             ticker_score += setup['Trend'][analysis]['weight']
 
@@ -121,64 +133,58 @@ def backtest(analysis_data, start_date, end_date, setup, report_hash):
             # Trend Analysis
             ###################################
             for analysis in setup['Trend']:
+
                 if setup['Trend'][analysis]['enabled']:
 
                     total_backtest_score += setup['Trend'][analysis]['weight']
 
+                    bt_crossings = None
+
+                    if analysis == "long_term":
+                        bt_crossings = detect_long_term_crossings(stock_data=ticker_hist_data,
+                                                        period=setup['Trend'][analysis]['period'],
+                                                        output_window=0,
+                                                        end_date=end_date,
+                                                        average_type="SMA" if
+                                                            setup['Trend'][analysis]['avg_type'] == 'sma' else "EMA")
+
                     if analysis == 'sma_cross' or analysis == 'ema_cross':
                         # Get Crossing data
-                        ma_crossings = detect_ma_crossings(ticker_hist_data,
+                        bt_crossings = detect_ma_crossings(ticker_hist_data,
                                                         short_window=setup['Trend'][analysis]['short'],
                                                         long_window=setup['Trend'][analysis]['long'],
                                                         output_window=0,
                                                         end_date=end_date,
                                                         average_type='EMA' if analysis == 'ema_cross' else 'SMA')
-                        try:
-                            backtest_data[ticker]
-                        except KeyError:
-                            backtest_data.update({ticker: {}})
-
-                        backtest_data[ticker].update({analysis: ma_crossings})
 
                     elif analysis == 'bollinger_bands':
-                        bb_crossings = detect_bollinger_crossings(stock_data=ticker_hist_data,
+                        bt_crossings = detect_bollinger_crossings(stock_data=ticker_hist_data,
                                                          period=setup['Trend'][analysis]['period'],
                                                          output_window=0,
                                                          average_type=setup['Trend'][analysis]['avg_type'],
                                                          end_date=end_date,
                                                          std_dev=setup['Trend'][analysis]['std_dev'])
-                        try:
-                            backtest_data[ticker]
-                        except KeyError:
-                            backtest_data.update({ticker: {}})
-                        backtest_data[ticker].update({analysis: bb_crossings})
 
                     elif analysis == 'week-rule':
 
-                        rw_crossings = detect_wr_crossings(stock_data=ticker_hist_data,
+                        bt_crossings = detect_wr_crossings(stock_data=ticker_hist_data,
                                                   period=setup['Trend'][analysis]['period'],
                                                   end_date=end_date,
                                                   output_window=0)
-                        try:
-                            backtest_data[ticker]
-                        except KeyError:
-                            backtest_data.update({ticker: {}})
-                        backtest_data[ticker].update({analysis: rw_crossings})
 
                     elif analysis == 'macd':
-                        macd_crossings = detect_macd_trend(ticker_hist_data,
+                        bt_crossings = detect_macd_trend(ticker_hist_data,
                                           short_window=setup['Trend'][analysis]['short'],
                                           long_window=setup['Trend'][analysis]['long'],
                                           signal_window=setup['Trend'][analysis]['signal_window'],
                                           output_window=0,
-                                          end_date=end_date,
-                                          lower_thold=setup['Trend'][analysis]['lower_thold'],
-                                          upper_thold=setup['Trend'][analysis]['upper_thold'])
-                        try:
-                            backtest_data[ticker]
-                        except KeyError:
-                            backtest_data.update({ticker: {}})
-                        backtest_data[ticker].update({analysis: macd_crossings})
+                                          end_date=end_date)
+
+                    try:
+                        backtest_data[ticker]
+                    except KeyError:
+                        backtest_data.update({ticker: {}})
+                    backtest_data[ticker].update({analysis: bt_crossings})
 
             # Search for events along the crossings
             analysis_day = datetime.strptime(start_date, "%Y-%m-%d")
@@ -241,6 +247,9 @@ def analysis_to_file(analysis_data, setup, report_hash):
         trend_total_weight = 0.0
         # Create Header based on analysis settings
         for trend in setup['Trend'].keys():
+            if trend == "long_term":
+                header = f"{header},{trend.upper()} {setup['Trend'][trend]['period']}"
+
             if trend == "sma_cross" or trend == "ema_cross":
                 header = f"{header},{trend.upper()} {setup['Trend'][trend]['short']}/" \
                          f"{setup['Trend'][trend]['long']}"
