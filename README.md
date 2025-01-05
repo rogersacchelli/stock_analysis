@@ -1,6 +1,6 @@
 # Stock Analysis Tool
 
-This Stock Analysis Tool is a Python-based application designed to analyze stock data using various techniques. It generates detailed reports, optionally sending results via email.
+This Stock Analysis Tool is a Python-based application designed to analyze stock data using various trend detection techniques. It generates detailed reports, optionally sending results via email, and includes a backtesting feature to evaluate historical performance.
 
 ## Features
 
@@ -8,11 +8,13 @@ This Stock Analysis Tool is a Python-based application designed to analyze stock
 - Analyze stock data for:
   - SMA (Simple Moving Average) crossings.
   - EMA (Exponential Moving Average) crossings.
-  - Bollinger Band.
-  - 4 Week Rule.
-  - MACD.
+  - Bollinger Band touches.
+  - Weekly Rule crossings.
+  - **Long-Term Trending Analysis**: Checks if the price has crossed a long-term moving average.
+  - **MACD Analysis**: Evaluates Moving Average Convergence Divergence (MACD) signals.
 - Generate reports in CSV format.
 - Optionally send analysis reports via email.
+- Backtest stock recommendations over a specified period.
 
 ## Requirements
 
@@ -21,6 +23,7 @@ This Stock Analysis Tool is a Python-based application designed to analyze stock
   - `yfinance`
   - `pandas`
   - `argparse`
+  - `dateutil`
   - Other dependencies listed in the `requirements.txt` file.
 - JSON configuration files for tickers, analysis, and application settings.
 
@@ -37,11 +40,6 @@ This Stock Analysis Tool is a Python-based application designed to analyze stock
    pip install -r requirements.txt
    ```
 
-3. Ensure the `reports/` and `logs/` directories exist:
-   ```bash
-   mkdir -p reports logs
-   ```
-
 ## Usage
 
 ### Command-Line Arguments
@@ -51,6 +49,9 @@ This Stock Analysis Tool is a Python-based application designed to analyze stock
 - `-c`, `--config`: Configuration file for application settings (required).
 - `-a`, `--analysis`: Analysis definition file (required).
 - `-l`, `--limit`: Limit the number of stocks processed (optional, default: 50).
+- `-b`, `--backtest`: Enables backtesting mode to evaluate recommendations over a specified period (optional).
+- `-sd`, `--bt_start_date`: Start date for backtesting in YYYY-MM-DD format (optional).
+- `-ed`, `--bt_end_date`: End date for backtesting in YYYY-MM-DD format (optional).
 
 ### Example Command
 
@@ -60,7 +61,10 @@ python main.py \
   -e user@example.com \
   -c config.json \
   -a analysis.json \
-  -l 100
+  -l 100 \
+  -b \
+  -sd 2023-01-01 \
+  -ed 2023-12-31
 ```
 
 ### Input Files
@@ -93,30 +97,51 @@ Specifies analysis parameters:
 ```json
 {
   "Period": "1y",
-  "Trend": {
+   "Trend": {
+    "long_term": {
+      "enabled": 1,
+      "period": 40,
+      "rate": 0.01,
+      "output_window": 5,
+      "avg_type": "sma",
+      "weight": 1.0
+    },
     "sma_cross": {
-      "enabled": true,
-      "short": 20,
-      "long": 50,
-      "eval_window": 5
+      "enabled": 1,
+      "long": 20,
+      "short": 5,
+      "output_window": 5,
+      "weight": 1.0
     },
     "ema_cross": {
-      "enabled": true,
-      "short": 12,
-      "long": 26,
-      "eval_window": 5
+      "enabled": 0,
+      "long": 20,
+      "short": 5,
+      "output_window": 5,
+      "weight": 1.0
     },
     "bollinger_bands": {
-      "enabled": true,
+      "enabled": 1,
+      "avg_type": "sma",
       "period": 20,
-      "eval_window": 5,
-      "avg_type": "SMA",
-      "std_dev": 2
+      "output_window": 3,
+      "std_dev": 2,
+      "weight": 1.0
     },
     "week_rule": {
-      "enabled": true,
-      "period": 14,
-      "eval_window": 5
+      "enabled": 0,
+      "period": 4,
+      "output_window": 5,
+      "weight": 1.0
+    },
+    "macd": {
+      "enabled": 1,
+      "average_type": "ema",
+      "short": 5,
+      "long": 20,
+      "signal_window": 9,
+      "output_window": 5,
+      "weight": 2.0
     }
   }
 }
@@ -126,7 +151,14 @@ Specifies analysis parameters:
 
 - **Reports**: Generated CSV files are saved in the `reports/` directory.
 - **Logs**: Error logs are saved in the `logs/` directory.
-- **Email**: If an email address is provided, the results are sent via email.
+- **Ticker Data**: Fetched stock data is saved in the `ticker_data/` directory.
+- **Email**: If an email address is provided and not in backtest mode, the results are sent via email.
+
+## Backtesting
+
+- Enable backtesting with the `-b` flag.
+- Specify the start and end dates using `-sd` and `-ed`.
+- Backtest results are included in the generated reports.
 
 ## Error Handling
 
@@ -139,5 +171,5 @@ Contributions are welcome! Feel free to submit issues or pull requests.
 
 ## License
 
-This project is licensed under the Apache License 2.0.
+This project is licensed under the Apache 2.0 License.
 

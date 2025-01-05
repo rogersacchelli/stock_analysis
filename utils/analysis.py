@@ -288,7 +288,7 @@ def analysis_to_file(analysis_data, setup, report_hash):
 
 def backtest_to_file(analysis_data, backtest_data, setup, report_hash):
 
-    with open(f"reports/{report_hash}.bt", mode='a') as f:
+    with open(f"reports/{report_hash}-bt.csv", mode='a') as f:
         header = "Ticker,Recommendation"
         for trend in setup['Trend'].keys():
             if setup['Trend'][trend]['enabled']:
@@ -309,30 +309,35 @@ def backtest_to_file(analysis_data, backtest_data, setup, report_hash):
                 result_output = f"{ticker},{recommendation}"
                 for analysis in setup['Trend'].keys():
                     # Add Analysis Data
-                    try:
-                        date = analysis_data[ticker][analysis]['Date'].values[0].astype('datetime64[D]')
-                        result_output += f",{round(analysis_data[ticker][analysis]['Close'].values[0],3)},"\
-                                         f"{date}"
-                        price_start.append(round(analysis_data[ticker][analysis]['Close'].values[0],3))
-                        date_start.append(date)
-                    except KeyError as e:
-                        error_message = f"{str(e)} for {ticker} for backtest analysis"
-                        print(error_message)
-                        result_output += ',,'
-                    # Add Backtest Data
-                    try:
-                        date = backtest_data[ticker]['results'][result_date][analysis]['Date'].values[0].astype('datetime64[D]')
-                        result_output += f",{round(backtest_data[ticker]['results'][result_date][analysis]['Close'].values[0],3)}," \
-                                         f"{date}"
-                        price_end.append(round(backtest_data[ticker]
-                                               ['results'][result_date][analysis]['Close'].values[0],3))
-                        date_end.append(date)
-                    except KeyError as e:
-                        error_message = f"{str(e)} for {ticker} for backtest analysis"
-                        print(error_message)
-                        result_output += ',,'
-                gain = round(max(price_end)/max(price_start) - 1 if recommendation == "Sell" else \
-                    1 - max(price_end)/max(price_start),3)*100
+                    if setup['Trend'][analysis]['enabled']:
+                        try:
+                            date = analysis_data[ticker][analysis]['Date'].values[0].astype('datetime64[D]')
+                            result_output += f",{round(analysis_data[ticker][analysis]['Close'].values[0], 2)},"\
+                                             f"{date}"
+                            price_start.append(round(analysis_data[ticker][analysis]['Close'].values[0], 2))
+                            date_start.append(date)
+                        except KeyError as e:
+                            error_message = f"{str(e)} for {ticker} for backtest analysis"
+                            print(error_message)
+                            result_output += ',,'
+                        # Add Backtest Data
+                        try:
+                            date = backtest_data[ticker]['results'][result_date][analysis]['Date'].values[0].astype('datetime64[D]')
+                            result_output += f",{round(backtest_data[ticker]['results'][result_date][analysis]['Close'].values[0], 2)}," \
+                                             f"{date}"
+                            price_end.append(round(backtest_data[ticker]
+                                                   ['results'][result_date][analysis]['Close'].values[0], 2))
+                            date_end.append(date)
+                        except KeyError as e:
+                            error_message = f"{str(e)} for {ticker} for backtest analysis"
+                            print(error_message)
+                            result_output += ',,'
+
+                gain = round(100 * (max(price_end) - max(price_start)) / max(price_start), 2)
+
+                if recommendation == "Sell":
+                    gain *= -1
+
                 period = str((max(date_end)-max(date_start))).replace("days","")
                 result_output += f",{gain},{period}\n"
                 f.write(result_output)
