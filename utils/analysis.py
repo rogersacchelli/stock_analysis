@@ -187,10 +187,17 @@ def backtest(analysis_data, start_date, end_date, setup, report_hash):
                     backtest_data[ticker].update({analysis: bt_crossings})
 
             # Search for events along the crossings
-            analysis_day = datetime.strptime(start_date, "%Y-%m-%d")
+            analysis_day = start_date
+
+            if isinstance(start_date, str):
+                analysis_day = datetime.strptime(start_date, "%Y-%m-%d")
+
+            if isinstance(end_date, str):
+                end_date = datetime.strptime(end_date, "%Y-%m-%d")
+
             recommendation = 'Buy' if analysis_data[ticker]['score'] < 0.0 else 'Sell'
 
-            while analysis_day <= datetime.strptime(end_date, "%Y-%m-%d"):
+            while analysis_day <= end_date:
 
                 backtest_score = 0.0
                 updates = {}
@@ -346,6 +353,9 @@ def backtest_to_file(analysis_data, backtest_data, setup, report_hash):
 
 
 def get_backtest_dates(start_date, period):
+
+    if isinstance(start_date, datetime):
+        start_date = datetime.strftime(start_date, "%Y-%m-%d")
 
     backtest_end_date = datetime.strptime(start_date, "%Y-%m-%d") - relativedelta(days=1)
 
