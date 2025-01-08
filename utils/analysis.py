@@ -400,7 +400,7 @@ def get_position_results(setup):
             # "Ticker,Price Start,Price End,Date Start,Gain,Period\n"
             date_start = datetime.strptime(date, "%Y-%m-%d")
             end_date = datetime.today()
-            stock_data = fetch_yahoo_stock_data(ticker, start_date=None, end_date=end_date, period='1d')
+            stock_data = fetch_yahoo_stock_data(ticker, start_date='1d', end_date=end_date, period='1d')
 
             price_start = setup['Position'][ticker][date]['price']
             volume = setup['Position'][ticker][date]['volume']

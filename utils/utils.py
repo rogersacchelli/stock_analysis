@@ -132,6 +132,7 @@ def analysis_to_file(analysis_data, setup, report_hash):
 
         f.close()
 
+
 def position_results_to_file(position_results, setup, hash):
 
     with open(f"reports/{hash}-position.csv", mode='w') as f:

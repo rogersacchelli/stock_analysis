@@ -34,8 +34,6 @@ def main():
     limit = args.limit
 
     # Create required dirs if not exist
-
-    # Example usage
     create_directories_if_not_exist("reports")
     create_directories_if_not_exist("logs")
     create_directories_if_not_exist("ticker_data")

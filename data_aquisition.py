@@ -34,13 +34,14 @@ def load_pickled_stock_data(ticker, start_date: datetime, end_date: datetime):
 
     if isinstance(start_date, str):
         days = get_days_from_period(start_date)
-        start_date = end_date - relativedelta(days=days)
+        start_date = (end_date - relativedelta(days=days)).strftime("%Y-%m-%d")
 
-    hash = get_hash(f"{ticker}-{start_date}-{end_date}")
-    pickle_file = f"{hash}.pkl"
+    end_date = end_date.strftime("%Y-%m-%d")
 
-    if search_file('ticker_data', pickle_file) is not None:
-        with open(f"ticker_data/{pickle_file}", "rb") as f:
+    filename = f"{ticker}-{start_date}_{end_date}.pkl"
+
+    if search_file('ticker_data', filename) is not None:
+        with open(f"ticker_data/{filename}", "rb") as f:
             return pickle.load(f)
     else:
         return None
@@ -55,11 +56,10 @@ def save_pickled_stock_data(ticker, start_date: datetime, end_date: datetime, da
     start_date = start_date.strftime("%Y-%m-%d")
     end_date = end_date.strftime("%Y-%m-%d")
 
-    hash = get_hash(f"{ticker}-{start_date}-{end_date}")
-    pickle_file = f"{hash}.pkl"
+    filename = f"{ticker}-{start_date}_{end_date}.pkl"
 
-    if search_file('ticker_data', pickle_file) is None:
-        with open(f"ticker_data/{pickle_file}", "wb") as file:
+    if search_file('ticker_data', filename) is None:
+        with open(f"ticker_data/{filename}", "wb") as file:
             pickle.dump(data, file)
 
 
