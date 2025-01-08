@@ -282,18 +282,19 @@ def analysis_to_file(analysis_data, setup, report_hash):
         trend_total_weight = 0.0
         # Create Header based on analysis settings
         for trend in setup['Trend'].keys():
-            if trend == "long_term":
-                header = f"{header},{trend.upper()} {setup['Trend'][trend]['period']}"
+            if setup['Trend'][trend]['enabled']:
+                if trend == "long_term":
+                    header = f"{header},{trend.upper()} {setup['Trend'][trend]['period']}"
 
-            if trend == "sma_cross" or trend == "ema_cross":
-                header = f"{header},{trend.upper()} {setup['Trend'][trend]['short']}/" \
-                         f"{setup['Trend'][trend]['long']}"
+                if trend == "sma_cross" or trend == "ema_cross":
+                    header = f"{header},{trend.upper()} {setup['Trend'][trend]['short']}/" \
+                             f"{setup['Trend'][trend]['long']}"
 
-            elif trend == "bollinger_bands" or trend == "week_rule":
-                header = f"{header},{setup['Trend'][trend]['period']} {trend.upper()}"
+                elif trend == "bollinger_bands" or trend == "week_rule":
+                    header = f"{header},{setup['Trend'][trend]['period']} {trend.upper()}"
 
-            elif trend == "macd":
-                header = f"{header},{setup['Trend'][trend]['signal_window']} {trend.upper()}"
+                elif trend == "macd":
+                    header = f"{header},{setup['Trend'][trend]['signal_window']} {trend.upper()}"
 
         f.write(header + '\n')
 
@@ -303,15 +304,16 @@ def analysis_to_file(analysis_data, setup, report_hash):
             analysis_output = f"{ticker},{current_date}"
 
             for analysis in setup['Trend'].keys():
-                try:
-                    recommendation = analysis_data[ticker][analysis]['Cross'].values[0]
-                    analysis_output += f",{recommendation}"
+                if setup['Trend'][analysis]['enabled']:
+                    try:
+                        recommendation = analysis_data[ticker][analysis]['Cross'].values[0]
+                        analysis_output += f",{recommendation}"
 
-                except KeyError as ke:
-                    error_message = f"No {str(ke)} analysis found for {ticker}"
-                    print(error_message)
-                    log_error(error_message, f"logs/{report_hash}.log")
-                    analysis_output += ","
+                    except KeyError as ke:
+                        error_message = f"No {str(ke)} analysis found for {ticker}"
+                        print(error_message)
+                        log_error(error_message, f"logs/{report_hash}.log")
+                        analysis_output += ","
 
             f.write(analysis_output + '\n')
 
