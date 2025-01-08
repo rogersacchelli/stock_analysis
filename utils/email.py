@@ -15,7 +15,7 @@ def send_html_email(sender_email, receiver_email, subject, html_content,
     subject: The subject of the email.
     html_content: The HTML content of the email.
     smtp_server: The SMTP server address.
-    user: The username for SMTP authentication.
+    smtp_port: SMTP Server port.
     password: The password for SMTP authentication.
   """
 

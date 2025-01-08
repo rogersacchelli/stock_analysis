@@ -57,10 +57,17 @@
   "Cycles": {},
   "Sentiment": {},
   "Period": "3mo",
-  "Position": ["AAPL", "TSLA", "VT", "CRWD", "NOK", "NVDA", "CRM"],
+  "Position": ["NOK", "VOO","VT", "NOK", "CRM", "HACK", "COST"],
   "Short": 1,
-  "Observation": ["MSFT", "NVDA", "PLTR"],
+  "Observation": ["MSFT", "NVDA", "PLTR", "TSLA"],
   "Thresholds": {
-    "Trend": {"Buy": 0.5, "Sell": -0.3}
+    "Trend": {"Buy": 0.4, "Sell": -0.3}
+  },
+  "Risk": {
+    "Stop": {
+      "enabled": 1,
+      "warning": 0.01,
+      "margin": 0.02
+    }
   }
 }

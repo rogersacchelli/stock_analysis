@@ -1,11 +1,9 @@
-from datetime import datetime
-from dateutil.relativedelta import relativedelta
 import argparse
 import pandas as pd
-from utils.analysis import analysis_to_file, select_stocks_from_setup, backtest, get_backtest_dates, backtest_to_file
+from utils.analysis import *
 from utils.email import send_html_email, csv_to_html
 from utils.loadSettings import LoadFromFile
-from utils.utils import get_hash, log_error, valid_date, create_directories_if_not_exist
+from utils.utils import get_hash, valid_date, create_directories_if_not_exist, log_error
 
 pd.options.mode.chained_assignment = None
 
@@ -21,9 +19,12 @@ def main():
     parser.add_argument('-a', '--analysis', required=True, action=LoadFromFile, help="Analysis Definition File.")
     parser.add_argument('-l', '--limit', type=int, default=50, help="Limit the number of stocks processed.")
     parser.add_argument('-b', '--backtest', action="store_true",
-                        help="Backtest mode evaluates the recommendations over specified period of time")
-    parser.add_argument('-sd', '--bt_start_date', type=valid_date, help="The Start Date - format YYYY-MM-DD")
-    parser.add_argument('-ed', '--bt_end_date', type=valid_date, help="The End Date - format YYYY-MM-DD")
+                        help="Backtest mode provides recommended stocks prior to start date and assess the "
+                             "recommendation over specified the specified period. If no dates are specified, "
+                             "default period starts as 1y ago until now.")
+    parser.add_argument('-sd', '--bt_start_date', type=valid_date, help="The start date which is intended to assess "
+                                                                        "the recommended stocks - format YYYY-MM-DD")
+    parser.add_argument('-ed', '--bt_end_date', type=valid_date, help="The end date of evaluation - format YYYY-MM-DD")
     args = parser.parse_args()
 
     config = args.config
@@ -41,7 +42,7 @@ def main():
     current_datetime = datetime.now().strftime('%Y-%m-%dT%H-%M-%S')
     current_date = datetime.now().strftime('%d/%m/%Y')
     report_hash = get_hash(f"{args.email}" + str(setup) + current_datetime + str(args.input)
-                                  + str(args.backtest))
+                           + str(args.backtest))
     report_name = f"reports/{report_hash}.csv"
     log_file = f"logs/{report_hash}.log"
 
@@ -53,25 +54,35 @@ def main():
 
         # Run Analysis
         analysis_data = {}
+
         if args.backtest:
             # If required backtest and no dates provided, default to last one year
             if args.bt_start_date is None:
-                args.bt_start_date = (datetime.now() - relativedelta(years=1)).strftime("%Y-%m-%d")
-            if args.bt_end_date is None or args.bt_end_date == datetime.now().strftime("%Y-%m-%d"):
-                args.bt_end_date = (datetime.now() - relativedelta(days=1)).strftime("%Y-%m-%d")
+                args.bt_start_date = (datetime.now() - relativedelta(years=1))
+            if args.bt_end_date is None or args.bt_end_date == datetime.today():
+                args.bt_end_date = (datetime.now() - relativedelta(days=1))
 
             # Determining the stocks for the backtest analysis requires setting the end-date as the start-date
             # Start date is the end-date minus the period required of assessment, defined on the setup period.
-            backtest_stock_selection_dates = get_backtest_dates(args.bt_start_date, setup['Period'])
-            analysis_data = select_stocks_from_setup(ticker_list, setup, limit, report_hash,
-                                                     start_date=backtest_stock_selection_dates[0],
-                                                     end_date=backtest_stock_selection_dates[1])
+            recommendation_period = get_recommendation_period(args.bt_start_date, setup['Period'])
 
-            backtest_result = backtest(analysis_data=analysis_data, start_date=args.bt_start_date,
-                                       end_date=args.bt_end_date, setup=setup, report_hash=report_hash)
+            # Get recommended stocks according to setup file
+            analysis_data = select_stocks_from_setup(ticker_list, setup, limit, report_hash,
+                                                     start_date=recommendation_period[0],
+                                                     end_date=recommendation_period[1])
+
+            # ----------------------- Backtest -----------------------
+
+            backtest_start_date = get_backtest_start(start_date=args.bt_start_date, setup=setup)
+
+            backtest_result = backtest(analysis_data=analysis_data,
+                                       start_date=backtest_start_date,
+                                       end_date=args.bt_end_date,
+                                       setup=setup,
+                                       report_hash=report_hash)
 
             # Save backtest to report
-            backtest_to_file(analysis_data=analysis_data,backtest_data=backtest_result, setup=setup,
+            backtest_to_file(analysis_data=analysis_data, backtest_data=backtest_result, setup=setup,
                              report_hash=report_hash)
 
         else:
@@ -103,7 +114,9 @@ def main():
         else:
             print("No results to send via email.")
     except Exception as e:
-        print(f"Error: {str(e)}")
+        error_message = f"Error: {str(e)}"
+        print(error_message)
+        log_error(error_message, log_file)
 
 
 if __name__ == "__main__":

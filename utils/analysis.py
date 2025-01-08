@@ -1,3 +1,4 @@
+from risk import get_stop_data
 from utils.utils import log_error
 from data_aquisition import fetch_yahoo_stock_data
 from dateutil.relativedelta import relativedelta
@@ -85,6 +86,8 @@ def select_stocks_from_setup(stock_list, setup, limit, report_hash, start_date, 
                             analysis_data[ticker]
                         except KeyError:
                             analysis_data.update({ticker: {}})
+
+                        # Assign weights to results
     
                         analysis_data[ticker].update({analysis: crossings})
                         if crossings['Cross'].values[0] == "Sell":
@@ -105,6 +108,11 @@ def select_stocks_from_setup(stock_list, setup, limit, report_hash, start_date, 
             if final_score >= setup['Thresholds']['Trend']['Buy'] or \
                     final_score <= setup['Thresholds']['Trend']['Sell']:
                 analysis_data[ticker].update({"score": ticker_score / total_score})
+
+                # Add Stop info if required
+                if setup['Risk']['Stop']['enabled']:
+                    analysis_data[ticker].update({"stop": {"date_start": stock_data['Close'].tail(1).index,
+                                                           "price_start": stock_data['Close'].tail(1).values[0]}})
             else:
                 analysis_data.pop(ticker, None)
 
@@ -187,31 +195,38 @@ def backtest(analysis_data, start_date, end_date, setup, report_hash):
                     backtest_data[ticker].update({analysis: bt_crossings})
 
             # Search for events along the crossings
-            analysis_day = start_date
+            analysis_start_date = start_date + relativedelta(days=get_pre_analysis_period(setup))
+            analysis_day = analysis_start_date
 
-            if isinstance(start_date, str):
-                analysis_day = datetime.strptime(start_date, "%Y-%m-%d")
+            """ 
+            Stock selection assigns negative score values for stocks crossing down the analysis thresholds and
+            positive values score for stocks crossing up the analysis thresholds. Backtest Recommendation must 
+            seek for opposite recommendations of the analysis in order to correctly calculate gains.  
+            """
 
-            if isinstance(end_date, str):
-                end_date = datetime.strptime(end_date, "%Y-%m-%d")
+            analysis_recommendation = 'Sell' if analysis_data[ticker]['score'] < 0.0 else 'Buy'
+            backtest_recommendation = 'Sell' if analysis_recommendation == 'Buy' else 'Buy'
 
-            recommendation = 'Buy' if analysis_data[ticker]['score'] < 0.0 else 'Sell'
-
+            # TODO: Pack Analyisis of the next recommendation into a single function
+            # search through selected stocks common days of recommendation to them for backtesting dataset
             while analysis_day <= end_date:
 
                 backtest_score = 0.0
                 updates = {}
 
                 for ticker_analysis in backtest_data[ticker].keys():
+
+                    # discard 'results' key in backtest data
                     if ticker_analysis == 'results':
                         break
+
                     analysis_limit = analysis_day + relativedelta(days=setup['Trend'][ticker_analysis]['output_window'])
                     analysis_crossings = backtest_data[ticker][ticker_analysis]
-                    analysis_crossings = analysis_crossings[(analysis_crossings['Cross'] == recommendation) &
+                    analysis_crossings = analysis_crossings[(analysis_crossings['Cross'] == backtest_recommendation) &
                                                             (analysis_crossings['Date'] >= analysis_day) &
                                                             (analysis_crossings['Date'] <= analysis_limit)]
                     if not analysis_crossings.empty:
-                        if recommendation == 'Buy':
+                        if backtest_recommendation == 'Buy':
                             backtest_score += setup['Trend'][ticker_analysis]['weight']
                         else:
                             backtest_score -= setup['Trend'][ticker_analysis]['weight']
@@ -222,6 +237,8 @@ def backtest(analysis_data, start_date, end_date, setup, report_hash):
 
                 final_score = backtest_score / total_backtest_score
 
+                # The score of the first date which crosses the threshold for Buy/Sell is added to backtest data
+                # If criteria is not met, date is pop out of results.
                 if final_score >= setup['Thresholds']['Trend']['Buy']:
                     backtest_data[ticker]['results'][analysis_day].update({'score': final_score})
                     break
@@ -232,6 +249,17 @@ def backtest(analysis_data, start_date, end_date, setup, report_hash):
                     backtest_data[ticker]['results'].pop(analysis_day)
 
                 analysis_day = analysis_day + relativedelta(days=1)
+
+            # TODO: Pack this to a function
+            # Add Stop Data to prevent large losses if required
+            if setup['Risk']['Stop']['enabled']:
+                stop_date, stop_price = get_stop_data(ticker_hist_data, setup,
+                                                      start_price=analysis_data[ticker]['stop']['price_start'],
+                                                      start_date=analysis_start_date,
+                                                      initial_recommendation=analysis_recommendation)
+
+                if stop_price is not None:
+                    backtest_data[ticker].update({'stop': {'price': stop_price, 'date': stop_date}})
 
         return backtest_data
 
@@ -285,9 +313,6 @@ def analysis_to_file(analysis_data, setup, report_hash):
                     log_error(error_message, f"logs/{report_hash}.log")
                     analysis_output += ","
 
-            #ticker_final_score = ticker_score / trend_total_weight
-            #if (ticker_final_score >= setup['Thresholds']['Trend']['Buy'] or
-            #        ticker_final_score <= setup['Thresholds']['Trend']['Sell']):
             f.write(analysis_output + '\n')
 
         f.close()
@@ -296,11 +321,14 @@ def analysis_to_file(analysis_data, setup, report_hash):
 def backtest_to_file(analysis_data, backtest_data, setup, report_hash):
 
     with open(f"reports/{report_hash}-bt.csv", mode='a') as f:
-        header = "Ticker,Recommendation"
+        header = "Ticker,Analysis Recommendation"
         for trend in setup['Trend'].keys():
             if setup['Trend'][trend]['enabled']:
                 header += f",{trend}_price_start,{trend}_date_start,{trend}_price_end,{trend}_date_end"
-        header += f",gain,period\n"
+        if setup['Risk']['Stop']['enabled']:
+            header += f",gain,period,stop_date,effective_gain,effective_period\n"
+        else:
+            header += f",gain,period\n"
         f.write(header)
 
         for ticker in backtest_data.keys():
@@ -312,7 +340,7 @@ def backtest_to_file(analysis_data, backtest_data, setup, report_hash):
 
             for result_date in backtest_data[ticker]['results'].keys():
                 # Add result to file
-                recommendation = 'Buy' if backtest_data[ticker]['results'][result_date]['score'] > 0.0 else 'Sell'
+                recommendation = 'Buy' if analysis_data[ticker]['score'] > 0.0 else 'Sell'
                 result_output = f"{ticker},{recommendation}"
                 for analysis in setup['Trend'].keys():
                     # Add Analysis Data
@@ -345,19 +373,34 @@ def backtest_to_file(analysis_data, backtest_data, setup, report_hash):
                 if recommendation == "Sell":
                     gain *= -1
 
-                period = str((max(date_end)-max(date_start))).replace("days","")
-                result_output += f",{gain},{period}\n"
-                f.write(result_output)
+                period = str((max(date_end) - max(date_start))).replace("days", "")
+                result_output += f",{gain},{period}"
 
+                effective_gain = gain
+                effective_period = period
+
+                if setup['Risk']['Stop']['enabled'] and 'stop' in backtest_data[ticker]:
+
+                    stop_date = backtest_data[ticker]['stop']['date']
+
+                    if stop_date <= min(date_end):
+                        effective_gain = setup['Risk']['Stop']['margin']*100*(-1.0)
+                        effective_period = np.datetime64(backtest_data[ticker]['stop']['date']) - max(date_start)
+                        effective_period = str(effective_period).replace("days", "")
+
+                result_output += f",{stop_date},{effective_gain},{effective_period}"
+
+                f.write(result_output + '\n')
     f.close()
 
 
-def get_backtest_dates(start_date, period):
+def get_recommendation_period(start_date, period):
 
-    if isinstance(start_date, datetime):
-        start_date = datetime.strftime(start_date, "%Y-%m-%d")
+    # String date format to datetime
+    if isinstance(start_date, str):
+        start_date = datetime.strptime(start_date, "%Y-%m-%d")
 
-    backtest_end_date = datetime.strptime(start_date, "%Y-%m-%d") - relativedelta(days=1)
+    backtest_end_date = start_date - relativedelta(days=1)
 
     if 'd' in period:
         period = period.replace('d', '')
@@ -380,3 +423,26 @@ def get_backtest_dates(start_date, period):
 
     return [backtest_start_date, backtest_end_date]
 
+
+def get_pre_analysis_period(setup, calendar_days=True):
+
+    # Get the lengthiest period analysis from setup
+    period = 0
+    for analysis in setup['Trend'].keys():
+        if 'period' in setup['Trend'][analysis] and setup['Trend'][analysis]['enabled']:
+            if period < setup['Trend'][analysis]['period']:
+                period = setup['Trend'][analysis]['period']
+        elif 'long' in setup['Trend'][analysis]:
+            if period < setup['Trend'][analysis]['long']:
+                period = setup['Trend'][analysis]['long']
+
+    if calendar_days:
+        return int(period / 5) * 7 + (period % 5) + 7  # the last seven is an extra to cover holidays
+    else:
+        return period
+
+
+def get_backtest_start(start_date: datetime, setup):
+
+    start_date = start_date - relativedelta(days=get_pre_analysis_period(setup))
+    return start_date

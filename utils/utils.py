@@ -1,5 +1,6 @@
 import hashlib
 import os
+import numpy as np
 import argparse
 from datetime import datetime
 
@@ -61,3 +62,4 @@ def create_directories_if_not_exist(path):
     if not os.path.exists(path):
         os.makedirs(path)
         print(f"Directory '{path}' created successfully.")
+

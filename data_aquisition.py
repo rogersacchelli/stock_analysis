@@ -6,7 +6,7 @@ import yfinance as yf
 from utils.utils import get_hash, search_file
 
 
-def fetch_yahoo_stock_data(ticker, start_date, end_date, period="1y"):
+def fetch_yahoo_stock_data(ticker, start_date: datetime, end_date, period="1y"):
     """Fetch historical stock data for the given ticker."""
 
     if start_date is None:
@@ -30,7 +30,10 @@ def fetch_yahoo_stock_data(ticker, start_date, end_date, period="1y"):
     return stock_data
 
 
-def load_pickled_stock_data(ticker, start_date, end_date):
+def load_pickled_stock_data(ticker, start_date: datetime, end_date: datetime):
+
+    start_date = start_date.strftime("%Y-%m-%d")
+    end_date = end_date.strftime("%Y-%m-%d")
 
     hash = get_hash(f"{ticker}-{start_date}-{end_date}")
     pickle_file = f"{hash}.pkl"
@@ -42,7 +45,11 @@ def load_pickled_stock_data(ticker, start_date, end_date):
         return None
 
 
-def save_pickled_stock_data(ticker, start_date, end_date, data):
+def save_pickled_stock_data(ticker, start_date: datetime, end_date: datetime, data):
+
+    start_date = start_date.strftime("%Y-%m-%d")
+    end_date = end_date.strftime("%Y-%m-%d")
+
     hash = get_hash(f"{ticker}-{start_date}-{end_date}")
     pickle_file = f"{hash}.pkl"
 
