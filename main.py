@@ -86,8 +86,8 @@ def main():
                              report_hash=report_hash)
 
         else:
-            analysis_data = select_stocks_from_setup(ticker_list, setup, limit, report_hash,
-                                                     start_date=None, end_date=None)
+
+            analysis_data = select_stocks_from_setup(ticker_list, setup, limit, report_hash)
 
         # Save Analysis to Report File
         analysis_to_file(analysis_data, setup, report_hash)

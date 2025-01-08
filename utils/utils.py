@@ -1,8 +1,7 @@
 import hashlib
-import os
-import numpy as np
 import argparse
 from datetime import datetime
+import os
 
 
 def get_hash(data):
@@ -48,9 +47,6 @@ def search_file(directory, filename):
     return None
 
 
-import os
-
-
 def create_directories_if_not_exist(path):
     """
     Creates the specified directory path if it does not exist.
@@ -62,4 +58,26 @@ def create_directories_if_not_exist(path):
     if not os.path.exists(path):
         os.makedirs(path)
         print(f"Directory '{path}' created successfully.")
+
+
+def get_days_from_period(period):
+
+    if 'd' in period:
+        period = period.replace('d', '')
+        return int(period) * 1
+
+    elif 'w' in period:
+        period = period.replace('w', '')
+        return int(period) * 7
+
+    elif "mo" in period:
+        period = period.replace("mo", '')
+        return int(period) * 30
+
+    elif 'y' in period:
+        period = period.replace('y', '')
+        return int(period) * 365
+
+    else:
+        raise ValueError(f"Period format [{period}] not recognized. Valid forms: [d, w, m, y].")
 

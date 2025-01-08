@@ -1,5 +1,5 @@
 from risk import get_stop_data
-from utils.utils import log_error
+from utils.utils import log_error, get_days_from_period
 from data_aquisition import fetch_yahoo_stock_data
 from dateutil.relativedelta import relativedelta
 from collections import defaultdict
@@ -7,13 +7,13 @@ from trend import *
 from datetime import datetime
 
 
-def select_stocks_from_setup(stock_list, setup, limit, report_hash, start_date, end_date):
+def select_stocks_from_setup(stock_list, setup, limit, report_hash, start_date=None, end_date=None):
 
     analysis_data = {}
     log_file = f"logs/{report_hash}.log"
 
     if end_date is None:
-        end_date = datetime.now().strftime("%Y-%m-%d")
+        end_date = datetime.now()
 
     for ticker_code in stock_list:
         ticker = ticker_code['Code']
@@ -402,24 +402,9 @@ def get_recommendation_period(start_date, period):
 
     backtest_end_date = start_date - relativedelta(days=1)
 
-    if 'd' in period:
-        period = period.replace('d', '')
-        period_days = int(period) * 1
-        backtest_start_date = backtest_end_date - relativedelta(days=period_days)
-    elif 'w' in period:
-        period = period.replace('w', '')
-        period_days = int(period) * 7
-        backtest_start_date = backtest_end_date - relativedelta(days=period_days)
-    elif "mo" in period:
-        period = period.replace("mo", '')
-        period_days = int(period) * 30
-        backtest_start_date = backtest_end_date - relativedelta(days=period_days)
-    elif 'y' in period:
-        period = period.replace('y', '')
-        period_days = int(period) * 365
-        backtest_start_date = backtest_end_date - relativedelta(days=period_days)
-    else:
-        raise ValueError(f"Period format [{period}] not recognized. Valid forms: [d, w, m, y].")
+    period_days = get_days_from_period(period)
+
+    backtest_start_date = backtest_end_date - relativedelta(days=period_days)
 
     return [backtest_start_date, backtest_end_date]
 
