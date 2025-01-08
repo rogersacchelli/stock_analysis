@@ -81,3 +81,74 @@ def get_days_from_period(period):
     else:
         raise ValueError(f"Period format [{period}] not recognized. Valid forms: [d, w, m, y].")
 
+
+def analysis_to_file(analysis_data, setup, report_hash):
+    # Iterate through dict printing analysis data
+
+    current_date = datetime.now().strftime('%Y-%m-%d')
+
+    # Output file based on user settings
+    with open(f"reports/{report_hash}.csv", mode='a') as f:
+
+        header = "Ticker,Report Date"
+
+        trend_total_weight = 0.0
+        # Create Header based on analysis settings
+        for trend in setup['Trend'].keys():
+            if setup['Trend'][trend]['enabled']:
+                if trend == "long_term":
+                    header = f"{header},{trend.upper()} {setup['Trend'][trend]['period']}"
+
+                if trend == "sma_cross" or trend == "ema_cross":
+                    header = f"{header},{trend.upper()} {setup['Trend'][trend]['short']}/" \
+                             f"{setup['Trend'][trend]['long']}"
+
+                elif trend == "bollinger_bands" or trend == "week_rule":
+                    header = f"{header},{setup['Trend'][trend]['period']} {trend.upper()}"
+
+                elif trend == "macd":
+                    header = f"{header},{setup['Trend'][trend]['signal_window']} {trend.upper()}"
+
+        f.write(header + '\n')
+
+        # Add data per ticker
+        for ticker in analysis_data.keys():
+
+            analysis_output = f"{ticker},{current_date}"
+
+            for analysis in setup['Trend'].keys():
+                if setup['Trend'][analysis]['enabled']:
+                    try:
+                        recommendation = analysis_data[ticker][analysis]['Cross'].values[0]
+                        analysis_output += f",{recommendation}"
+
+                    except KeyError as ke:
+                        error_message = f"No {str(ke)} analysis found for {ticker}"
+                        print(error_message)
+                        log_error(error_message, f"logs/{report_hash}.log")
+                        analysis_output += ","
+
+            f.write(analysis_output + '\n')
+
+        f.close()
+
+def position_results_to_file(position_results, setup, hash):
+
+    with open(f"reports/{hash}-position.csv", mode='w') as f:
+        output = "Ticker,Date Start,Price Start,Last Close,Volume,Gain %,Period,Profit\n"
+        f.write(output)
+
+        for ticker in position_results.keys():
+            for date in position_results[ticker].keys():
+                price_start = position_results[ticker][date]['price_start']
+                price_end = position_results[ticker][date]['price_end']
+                gain = position_results[ticker][date]['gain']
+                period = position_results[ticker][date]['period'].days
+                volume = position_results[ticker][date]['volume']
+                profit = round(volume * (gain/100.0) * price_start, 2)
+                if (gain / 100.0) <= (1-setup['Risk']['Stop']['margin']):
+                    output = f"**{ticker}**,{date},{price_start},{price_end},{volume},**{gain}**,{period}, {profit}\n"
+                else:
+                    output = f"{ticker},{date},{price_start},{price_end},{volume},{gain},{period}, {profit}\n"
+                f.write(output)
+    f.close()

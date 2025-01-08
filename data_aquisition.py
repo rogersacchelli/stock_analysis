@@ -6,7 +6,7 @@ import yfinance as yf
 from utils.utils import get_hash, search_file, get_days_from_period
 
 
-def fetch_yahoo_stock_data(ticker, start_date: datetime, end_date, period="1y"):
+def fetch_yahoo_stock_data(ticker, start_date: datetime, end_date: datetime, period="1y"):
     """Fetch historical stock data for the given ticker."""
 
     if start_date is None:

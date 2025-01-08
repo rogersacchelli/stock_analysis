@@ -3,7 +3,8 @@ import pandas as pd
 from utils.analysis import *
 from utils.email import send_html_email, csv_to_html
 from utils.loadSettings import LoadFromFile
-from utils.utils import get_hash, valid_date, create_directories_if_not_exist, log_error
+from utils.utils import get_hash, valid_date, create_directories_if_not_exist, log_error, position_results_to_file, \
+    analysis_to_file
 
 pd.options.mode.chained_assignment = None
 
@@ -88,13 +89,17 @@ def main():
         else:
 
             analysis_data = select_stocks_from_setup(ticker_list, setup, limit, report_hash)
+            position_results = get_position_results(setup)
+            position_results_to_file(position_results, setup, report_hash)
 
         # Save Analysis to Report File
         analysis_to_file(analysis_data, setup, report_hash)
 
         # Send Email if required and not backtest
         if args.email and not args.backtest:
-            report_data = csv_to_html(report_name, position=setup['Position'])
+
+            report_data = csv_to_html(report_name, position=list(setup['Position'].keys()))
+            position_data = csv_to_html(f"reports/{report_hash}-position.csv", position=[])
 
             body = f"""<html> \
                    <head>
@@ -102,6 +107,9 @@ def main():
                    <body><h2>Daily Stock Report</h2> 
                    <h3>Trend Analysis</h3>
                     {report_data}
+                    <h3>Position Results</h3>
+                    {position_data}
+                    <p>** Lower or equal to stop margin</p>
                     </body></html>"""
 
             send_html_email(sender_email=config['Email']['from_email'], receiver_email=args.email,

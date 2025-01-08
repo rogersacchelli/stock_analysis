@@ -269,55 +269,7 @@ def backtest(analysis_data, start_date, end_date, setup, report_hash):
         log_error(error_message, log_file)
 
 
-def analysis_to_file(analysis_data, setup, report_hash):
-    # Iterate through dict printing analysis data
 
-    current_date = datetime.now().strftime('%Y-%m-%d')
-
-    # Output file based on user settings
-    with open(f"reports/{report_hash}.csv", mode='a') as f:
-
-        header = "Ticker,Report Date"
-
-        trend_total_weight = 0.0
-        # Create Header based on analysis settings
-        for trend in setup['Trend'].keys():
-            if setup['Trend'][trend]['enabled']:
-                if trend == "long_term":
-                    header = f"{header},{trend.upper()} {setup['Trend'][trend]['period']}"
-
-                if trend == "sma_cross" or trend == "ema_cross":
-                    header = f"{header},{trend.upper()} {setup['Trend'][trend]['short']}/" \
-                             f"{setup['Trend'][trend]['long']}"
-
-                elif trend == "bollinger_bands" or trend == "week_rule":
-                    header = f"{header},{setup['Trend'][trend]['period']} {trend.upper()}"
-
-                elif trend == "macd":
-                    header = f"{header},{setup['Trend'][trend]['signal_window']} {trend.upper()}"
-
-        f.write(header + '\n')
-
-        # Add data per ticker
-        for ticker in analysis_data.keys():
-
-            analysis_output = f"{ticker},{current_date}"
-
-            for analysis in setup['Trend'].keys():
-                if setup['Trend'][analysis]['enabled']:
-                    try:
-                        recommendation = analysis_data[ticker][analysis]['Cross'].values[0]
-                        analysis_output += f",{recommendation}"
-
-                    except KeyError as ke:
-                        error_message = f"No {str(ke)} analysis found for {ticker}"
-                        print(error_message)
-                        log_error(error_message, f"logs/{report_hash}.log")
-                        analysis_output += ","
-
-            f.write(analysis_output + '\n')
-
-        f.close()
 
 
 def backtest_to_file(analysis_data, backtest_data, setup, report_hash):
@@ -433,3 +385,34 @@ def get_backtest_start(start_date: datetime, setup):
 
     start_date = start_date - relativedelta(days=get_pre_analysis_period(setup))
     return start_date
+
+
+def get_position_results(setup):
+
+    results = {}
+    for ticker in setup['Position'].keys():
+
+        results.update({ticker: {}})
+
+        for date in setup['Position'][ticker].keys():
+
+            # Get the latest price for stock
+            # "Ticker,Price Start,Price End,Date Start,Gain,Period\n"
+            date_start = datetime.strptime(date, "%Y-%m-%d")
+            end_date = datetime.today()
+            stock_data = fetch_yahoo_stock_data(ticker, start_date=None, end_date=end_date, period='1d')
+
+            price_start = setup['Position'][ticker][date]['price']
+            volume = setup['Position'][ticker][date]['volume']
+
+            price_end = round(stock_data['Close'].tail(1).values[0], 2)
+            gain = round(100 * (price_end - price_start) / price_start, 2)
+            position_period = datetime.now() - date_start
+
+            results[ticker].update({date: {"price_start": price_start, "price_end": price_end, "gain": gain,
+                                           "volume": volume, "period": position_period}})
+
+    return results
+
+
+

@@ -48,8 +48,11 @@ def send_html_email(sender_email, receiver_email, subject, html_content,
         print(f"Error sending email: {e}")
 
 
-def csv_to_html(input_file, position):
+def csv_to_html(input_file, position=None):
     """Read CSV file and return it as a html data for mail"""
+
+    if position is None:
+        position = []
 
     with open(input_file, 'r') as csv_file:
         csv_reader = csv.reader(csv_file)

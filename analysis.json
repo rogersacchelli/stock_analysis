@@ -57,7 +57,30 @@
   "Cycles": {},
   "Sentiment": {},
   "Period": "3mo",
-  "Position": ["NOK", "VOO","VT", "NOK", "CRM", "HACK", "COST"],
+  "Position": {
+    "NOK":{
+      "2024-07-20": {
+        "price": 8.0,
+        "volume": 2
+      },
+      "2024-08-20": {
+        "price": 2.0,
+        "volume": 2
+      }
+    },
+    "VOO":{
+      "2024-04-20": {
+        "price": 1.0,
+        "volume": 2
+      }
+    },
+    "VT":{
+      "2024-01-20": {
+        "price": 10.1,
+        "volume": 4
+      }
+    }
+  },
   "Short": 1,
   "Observation": ["MSFT", "NVDA", "PLTR", "TSLA"],
   "Thresholds": {
