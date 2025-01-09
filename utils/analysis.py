@@ -269,9 +269,6 @@ def backtest(analysis_data, start_date, end_date, setup, report_hash):
         log_error(error_message, log_file)
 
 
-
-
-
 def backtest_to_file(analysis_data, backtest_data, setup, report_hash):
 
     with open(f"reports/{report_hash}-bt.csv", mode='a') as f:

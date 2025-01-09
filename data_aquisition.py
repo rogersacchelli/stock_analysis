@@ -38,7 +38,7 @@ def load_pickled_stock_data(ticker, start_date: datetime, end_date: datetime):
 
     end_date = end_date.strftime("%Y-%m-%d")
 
-    filename = f"{ticker}-{start_date}_{end_date}.pkl"
+    filename = f"{ticker}_{start_date}_{end_date}.pkl"
 
     if search_file('ticker_data', filename) is not None:
         with open(f"ticker_data/{filename}", "rb") as f:
@@ -56,7 +56,7 @@ def save_pickled_stock_data(ticker, start_date: datetime, end_date: datetime, da
     start_date = start_date.strftime("%Y-%m-%d")
     end_date = end_date.strftime("%Y-%m-%d")
 
-    filename = f"{ticker}-{start_date}_{end_date}.pkl"
+    filename = f"{ticker}_{start_date}_{end_date}.pkl"
 
     if search_file('ticker_data', filename) is None:
         with open(f"ticker_data/{filename}", "wb") as file:

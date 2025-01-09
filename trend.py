@@ -87,13 +87,27 @@ def detect_ma_crossings(stock_data, short_window, long_window, output_window, en
 
 
 def detect_bollinger_crossings(stock_data, period, average_type, output_window, end_date, std_dev):
-    stock_data[f"BB_{average_type.upper()}_{output_window}"] = stock_data['Close'].rolling(window=period).mean()
+    stock_data[f"BB_{average_type.upper()}_{period}"] = stock_data['Close'].rolling(window=period).mean()
     stock_data['StdDev'] = stock_data['Close'].rolling(window=period).std()
-    stock_data['UpperBand'] = stock_data[f"BB_{average_type.upper()}_{output_window}"] + (std_dev * stock_data['StdDev'])
-    stock_data['LowerBand'] = stock_data[f"BB_{average_type.upper()}_{output_window}"] - (std_dev * stock_data['StdDev'])
+    stock_data['Upper_Band'] = stock_data[f"BB_{average_type.upper()}_{period}"] + (std_dev * stock_data['StdDev'])
+    stock_data['Lower_Band'] = stock_data[f"BB_{average_type.upper()}_{period}"] - (std_dev * stock_data['StdDev'])
 
-    stock_data['Cross'] = stock_data.apply(
-        lambda row: 'Buy' if row['Close'] <= row['LowerBand'] else ('Sell' if row['Close'] >= row['UpperBand'] else None), axis=1)
+    stock_data['Prev_Close'] = stock_data['Close'].shift(1)
+    stock_data['Prev_Lower_Band'] = stock_data['Lower_Band'].shift(1)
+    stock_data['Prev_Upper_Band'] = stock_data['Upper_Band'].shift(1)
+
+    stock_data['Cross'] = None
+    stock_data.loc[
+        (stock_data['Close'] <= stock_data['Lower_Band']) &
+        (stock_data['Prev_Close'] > stock_data['Prev_Lower_Band']), 'Cross'] = 'Buy'
+    stock_data.loc[
+        (stock_data['Close'] >= stock_data['Upper_Band']) &
+        (stock_data['Prev_Close'] < stock_data['Prev_Upper_Band']), 'Cross'] = 'Sell'
+
+    stock_data.to_csv('MMM.csv', index=False)
+    #data.loc[(data['Close'] > data['Lower_Band']) & (data['Close'].shift(1) <= data['Lower_Band']), 'Cross'] = 'Buy'
+    # Sell signal when the price crosses below the upper band
+    #data.loc[(data['Close'] < data['Upper_Band']) & (data['Close'].shift(1) >= data['Upper_Band']), 'Cross'] = 'Sell'
 
     # Detect touches
     crossings = stock_data[stock_data['Cross'].notna()]
