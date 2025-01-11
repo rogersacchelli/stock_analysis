@@ -1,7 +1,9 @@
 import hashlib
 import argparse
+import logging
 from datetime import datetime
 import os
+import numpy as np
 
 
 def get_hash(data):
@@ -92,51 +94,131 @@ def analysis_to_file(analysis_data, setup, report_hash):
 
         header = "Ticker,Report Date"
 
-        trend_total_weight = 0.0
         # Create Header based on analysis settings
-        for trend in setup['Trend'].keys():
-            if setup['Trend'][trend]['enabled']:
-                if trend == "long_term":
-                    header = f"{header},{trend.upper()} {setup['Trend'][trend]['period']}"
+        analysis_list = ["Trend", "Momentum"]
 
-                if trend == "sma_cross" or trend == "ema_cross":
-                    header = f"{header},{trend.upper()} {setup['Trend'][trend]['short']}/" \
-                             f"{setup['Trend'][trend]['long']}"
-
-                elif trend == "bollinger_bands" or trend == "week_rule":
-                    header = f"{header},{setup['Trend'][trend]['period']} {trend.upper()}"
-
-                elif trend == "macd":
-                    header = f"{header},{setup['Trend'][trend]['signal_window']} {trend.upper()}"
+        for analysis in setup['Analysis'].keys():
+            for method in setup['Analysis'][analysis].keys():
+                if setup['Analysis'][analysis][method]['enabled']:
+                    name = setup['Analysis'][analysis][method]['name']
+                    header = f"{header},{name}"
 
         f.write(header + '\n')
 
         # Add data per ticker
         for ticker in analysis_data.keys():
 
-            analysis_output = f"{ticker},{current_date}"
+            score = analysis_data[ticker]['score']
 
-            for analysis in setup['Trend'].keys():
-                if setup['Trend'][analysis]['enabled']:
-                    try:
-                        recommendation = analysis_data[ticker][analysis]['Cross'].values[0]
-                        analysis_output += f",{recommendation}"
+            if score >= setup['Thresholds']['Buy'] or score <= setup['Thresholds']['Sell']:
+                analysis_output = f"{ticker},{current_date}"
 
-                    except KeyError as ke:
-                        error_message = f"No {str(ke)} analysis found for {ticker}"
-                        print(error_message)
-                        log_error(error_message, f"logs/{report_hash}.log")
-                        analysis_output += ","
+                for analysis in setup['Analysis'].keys():
+                    for method in setup['Analysis'][analysis].keys():
+                        if setup['Analysis'][analysis][method]['enabled']:
+                            try:
+                                recommendation = analysis_data[ticker][method]['Cross'].values[0]
+                                analysis_output += f",{recommendation}"
+                            except KeyError as ke:
+                                error_message = f"No {str(ke)} analysis found for {ticker}"
+                                print(error_message)
+                                log_error(error_message, f"logs/{report_hash}.log")
+                                analysis_output += ","
 
-            f.write(analysis_output + '\n')
+                f.write(analysis_output + '\n')
+            else:
+                print(f"{ticker} did not meet minimum score with {round(score, 2)}")
 
         f.close()
+
+
+def backtest_to_file(analysis_data, backtest_data, setup, report_hash):
+
+    try:
+        with open(f"reports/{report_hash}-bt.csv", mode='a') as f:
+            header = "Ticker,Analysis Recommendation"
+            for analysis in setup['Analysis'].keys():
+                for method in setup['Analysis'][analysis].keys():
+                    if setup['Analysis'][analysis][method]['enabled']:
+                        header += f",{method}_price_start,{method}_date_start,{method}_price_end,{method}_date_end"
+                    if setup['Risk']['Stop']['enabled']:
+                        header += f",gain,period,stop_date,effective_gain,effective_period\n"
+                    else:
+                        header += f",gain,period\n"
+                f.write(header)
+
+            for ticker in backtest_data.keys():
+                # Get results recommendation for ticket
+                price_start = []
+                price_end = []
+                date_start = []
+                date_end = []
+
+                for result_date in backtest_data[ticker]['results'].keys():
+                    # Add result to file
+                    recommendation = 'Buy' if analysis_data[ticker]['score'] > 0.0 else 'Sell'
+                    result_output = f"{ticker},{recommendation}"
+                    for analysis in setup['Analysis'].keys():
+                        for method in setup['Analysis'][analysis].keys():
+                            # Add Analysis Data
+                            if setup['Analysis'][analysis][method]['enabled']:
+                                try:
+                                    if method in analysis_data[ticker]:
+                                        date = analysis_data[ticker][method]['Date'].values[0].astype('datetime64[D]')
+                                        result_output += f",{round(analysis_data[ticker][method]['Close'].values[0], 2)}," \
+                                                         f"{date}"
+                                        price_start.append(round(analysis_data[ticker][method]['Close'].values[0], 2))
+                                        date_start.append(date)
+                                except KeyError as e:
+                                    error_message = f"{str(e)} for {ticker} for backtest analysis"
+                                    print(error_message)
+                                    result_output += ',,'
+                                # Add Backtest Data
+                                try:
+                                    date = backtest_data[ticker]['results'][result_date][method]['Date'].values[0].astype(
+                                        'datetime64[D]')
+                                    result_output += f",{round(backtest_data[ticker]['results'][result_date][method]['Close'].values[0], 2)}," \
+                                                     f"{date}"
+                                    price_end.append(round(backtest_data[ticker]
+                                                           ['results'][result_date][method]['Close'].values[0], 2))
+                                    date_end.append(date)
+                                except KeyError as e:
+                                    error_message = f"{str(e)} for {ticker} for backtest analysis"
+                                    print(error_message)
+                                    result_output += ',,'
+
+                    gain = round(100 * (max(price_end) - max(price_start)) / max(price_start), 2)
+
+                    if recommendation == "Sell":
+                        gain *= -1
+
+                    period = str((max(date_end) - max(date_start))).replace("days", "")
+                    result_output += f",{gain},{period}"
+
+                    effective_gain = gain
+                    effective_period = period
+
+                    if setup['Risk']['Stop']['enabled'] and 'stop' in backtest_data[ticker]:
+
+                        stop_date = backtest_data[ticker]['stop']['date']
+
+                        if stop_date <= min(date_end):
+                            effective_gain = setup['Risk']['Stop']['margin'] * 100 * (-1.0)
+                            effective_period = np.datetime64(backtest_data[ticker]['stop']['date']) - max(date_start)
+                            effective_period = str(effective_period).replace("days", "")
+
+                    result_output += f",{stop_date},{effective_gain},{effective_period}"
+
+                    f.write(result_output + '\n')
+        f.close()
+    except Exception as error:
+        logging.error(str(error))
 
 
 def position_results_to_file(position_results, setup, hash):
 
     with open(f"reports/{hash}-position.csv", mode='w') as f:
-        output = "Ticker,Date Start,Price Start,Last Close,Volume,Gain %,Period,Profit\n"
+        output = "Ticker,Date Start,Price Start,Last Close,Volume,Gain %,Period,Profit [USD]\n"
         f.write(output)
 
         for ticker in position_results.keys():
@@ -147,7 +229,7 @@ def position_results_to_file(position_results, setup, hash):
                 period = position_results[ticker][date]['period'].days
                 volume = position_results[ticker][date]['volume']
                 profit = round(volume * (gain/100.0) * price_start, 2)
-                if (gain / 100.0) <= (1-setup['Risk']['Stop']['margin']):
+                if (gain / 100.0) <= (setup['Risk']['Stop']['margin'] * -1.00):
                     output = f"**{ticker}**,{date},{price_start},{price_end},{volume},**{gain}**,{period}, {profit}\n"
                 else:
                     output = f"{ticker},{date},{price_start},{price_end},{volume},{gain},{period}, {profit}\n"

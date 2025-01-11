@@ -4,22 +4,25 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
 
-def send_html_email(sender_email, receiver_email, subject, html_content,
-                    smtp_server, smtp_port, password):
+def send_html_email(receiver_email, subject, html_content,
+                    config):
     """
   Sends an HTML email using SMTP.
 
   Args:
-    sender_email: The email address of the sender.
     receiver_email: The email address of the recipient.
     subject: The subject of the email.
     html_content: The HTML content of the email.
-    smtp_server: The SMTP server address.
-    smtp_port: SMTP Server port.
-    password: The password for SMTP authentication.
+    config: Configuration File.
   """
 
     try:
+
+        smtp_server = config['Email']['smtp_server']
+        smtp_port = config['Email']['smtp_port']
+        password = config['Email']['from_password']
+        sender_email = config['Email']['from_email']
+
         msg = MIMEMultipart('alternative')
         msg['Subject'] = subject
         msg['From'] = sender_email
@@ -65,17 +68,22 @@ def csv_to_html(input_file, position=None):
             html_output += "  <tr>\n"
             for item in row:
                 if any(member in row for member in position):
-                    html_output += f"    <td style=\"text-align: center; color: red;\"text-align: center; " \
+                    html_output += f"    <td style=\"font-family: 'Courier New', Courier, monospace; " \
+                                   f"\"text-align: center; color: red;\"text-align: center; " \
                                    f"vertical-align: middle;\">{item}</td>\n"
                 else:
                     if is_first_row:
-                        html_output += f"    <td style=\"text-align: center; font-weight: bold; \
+                        html_output += f"    <td style=\"font-family: 'Courier New', Courier, monospace; " \
+                                       f"\"text-align: center; font-weight: bold; \
                         vertical-align: middle;\">{item}</td>\n"
                     else:
-                        html_output += f"    <td style=\"text-align: center; vertical-align: middle;\">{item}</td>\n"
+                        html_output += f"    <td style=\"font-family: 'Courier New', Courier, monospace; " \
+                                       f"\"text-align: center; vertical-align: middle;\">{item}</td>\n"
             html_output += "  </tr>\n"
             is_first_row = 0
 
         # Close the HTML table
         html_output += "</table>"
     return html_output
+
+

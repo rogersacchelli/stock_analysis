@@ -2,28 +2,32 @@
   "Stocks": {
     "Tickers": "AMD, ABBV, ALB, AAL, CPB, TSLA"
   },
-  "Trend": {
+  "Analysis": {
+    "Trend": {
     "long_term": {
       "enabled": 1,
       "period": 40,
       "rate": 0.01,
       "output_window": 5,
       "avg_type": "sma",
-      "weight": 1.0
+      "weight": 1.0,
+      "name": "Long Term Crossing"
     },
     "sma_cross": {
       "enabled": 1,
       "long": 20,
       "short": 5,
       "output_window": 5,
-      "weight": 1.0
+      "weight": 1.0,
+      "name": "SMA Cross"
     },
     "ema_cross": {
       "enabled": 0,
       "long": 20,
       "short": 5,
       "output_window": 5,
-      "weight": 1.0
+      "weight": 1.0,
+      "name": "EMA Cross"
     },
     "bollinger_bands": {
       "enabled": 1,
@@ -31,13 +35,15 @@
       "period": 20,
       "output_window": 3,
       "std_dev": 2,
-      "weight": 1.0
+      "weight": 1.0,
+      "name": "Bollinger Bands"
     },
     "week_rule": {
       "enabled": 0,
       "period": 4,
       "output_window": 5,
-      "weight": 1.0
+      "weight": 1.0,
+      "name": "Week Rule"
     },
     "macd": {
       "enabled": 1,
@@ -46,10 +52,22 @@
       "long": 20,
       "signal_window": 9,
       "output_window": 5,
-      "weight": 2.0
+      "weight": 2.0,
+      "name": "MACD"
     }
   },
-  "Momentum": {},
+    "Momentum": {
+    "rsi": {
+      "enabled": 1,
+      "period": 14,
+      "output_window": 3,
+      "lower": 30,
+      "upper": 70,
+      "weight": 3.0,
+      "name": "RSI"
+    }
+  }
+  },
   "Volume": {},
   "Sup/Res": {},
   "Volatility": {},
@@ -58,13 +76,13 @@
   "Sentiment": {},
   "Period": "3mo",
   "Position": {
-    "NOK":{
-      "2024-07-20": {
-        "price": 8.0,
-        "volume": 2
+    "COST":{
+      "2025-01-08": {
+        "price": 924.50,
+        "volume": 3
       },
-      "2024-08-20": {
-        "price": 2.0,
+      "2025-01-06": {
+        "price": 919.09,
         "volume": 2
       }
     },
@@ -84,7 +102,8 @@
   "Short": 1,
   "Observation": ["MSFT", "NVDA", "PLTR", "TSLA"],
   "Thresholds": {
-    "Trend": {"Buy": 0.4, "Sell": -0.3}
+    "Buy": 0.4,
+    "Sell": -0.3
   },
   "Risk": {
     "Stop": {
