@@ -2,6 +2,7 @@ import smtplib
 import csv
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from datetime import datetime
 
 
 def send_html_email(receiver_email, subject, html_content,
@@ -87,3 +88,23 @@ def csv_to_html(input_file, position=None):
     return html_output
 
 
+def mail_analysis(report_hash, setup, config, rctp):
+
+    date = datetime.now().strftime("%Y-%m-%d")
+
+    report_data = csv_to_html(f"reports/{report_hash}.csv", position=list(setup['Position'].keys()))
+    position_data = csv_to_html(f"reports/{report_hash}-position.csv", position=[])
+
+    body = f"""<html> \
+                   <head>
+                    </head> 
+                   <body><h2 style="font-family: 'Courier New', Courier, monospace;">Daily Stock Report</h2> 
+                   <h3 style="font-family: 'Courier New', Courier, monospace;">Analysis</h3>
+                    {report_data}
+                    <h3 style="font-family: 'Courier New', Courier, monospace;">Position Results</h3>
+                    {position_data}
+                    <p style="font-family: 'Courier New', Courier, monospace;">** Lower or equal to stop margin</p>
+                    </body></html>"""
+
+    send_html_email(receiver_email=rctp, subject=f"Stock Analysis {date}",
+                    config=config, html_content=body)

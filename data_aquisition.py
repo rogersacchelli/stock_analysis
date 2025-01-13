@@ -6,24 +6,15 @@ import yfinance as yf
 from utils.utils import get_hash, search_file, get_days_from_period
 
 
-def fetch_yahoo_stock_data(ticker, start_date, end_date: datetime, period="1y"):
+def fetch_yahoo_stock_data(ticker, start_date, end_date: datetime):
     """Fetch historical stock data for the given ticker."""
 
-    if start_date is None:
-        # if start_date is None, it means the latest data during the period selected, so use start_date as period
-        stock_data = load_pickled_stock_data(ticker=ticker, start_date=period,
-                                             end_date=end_date)
+    # If no pickled data is found, then download it
+    stock_data = load_pickled_stock_data(ticker=ticker, start_date=start_date, end_date=end_date)
 
-        # If no pickled data is found, then download it
-        if stock_data is None:
-            stock_data = yf.download(ticker, period=period, multi_level_index=False)
-            save_pickled_stock_data(ticker=ticker, start_date=period, end_date=end_date, data=stock_data)
-    else:
-        stock_data = load_pickled_stock_data(ticker=ticker, start_date=start_date, end_date=end_date)
-
-        if stock_data is None:
-            stock_data = yf.download(ticker, start=start_date, end=end_date, multi_level_index=False)
-            save_pickled_stock_data(ticker=ticker, start_date=start_date, end_date=end_date, data=stock_data)
+    if stock_data is None:
+        stock_data = yf.download(ticker, start=start_date, end=end_date, multi_level_index=False)
+        save_pickled_stock_data(ticker=ticker, start_date=start_date, end_date=end_date, data=stock_data)
 
     if stock_data.empty:
         raise ValueError(f"No data available for ticker {ticker}.")
@@ -32,12 +23,8 @@ def fetch_yahoo_stock_data(ticker, start_date, end_date: datetime, period="1y"):
 
 def load_pickled_stock_data(ticker, start_date: datetime, end_date: datetime):
 
-    if isinstance(start_date, str):
-        days = get_days_from_period(start_date)
-        start_date = (end_date - relativedelta(days=days)).strftime("%Y-%m-%d")
-
-    end_date = end_date.strftime("%Y-%m-%d")
     start_date = start_date.strftime("%Y-%m-%d")
+    end_date = end_date.strftime("%Y-%m-%d")
 
     filename = f"{ticker}_{start_date}_{end_date}.pkl"
 
@@ -49,10 +36,6 @@ def load_pickled_stock_data(ticker, start_date: datetime, end_date: datetime):
 
 
 def save_pickled_stock_data(ticker, start_date: datetime, end_date: datetime, data):
-
-    if isinstance(start_date, str):
-        days = get_days_from_period(start_date)
-        start_date = end_date - relativedelta(days=days)
 
     start_date = start_date.strftime("%Y-%m-%d")
     end_date = end_date.strftime("%Y-%m-%d")

@@ -1,7 +1,7 @@
 from momentum import rsi
 import logging
 from risk import get_stop_data
-from utils.utils import log_error, get_days_from_period
+from utils.utils import log_error, get_days_from_period, get_pre_analysis_period
 from data_aquisition import fetch_yahoo_stock_data
 from dateutil.relativedelta import relativedelta
 from collections import defaultdict
@@ -13,22 +13,21 @@ def select_stocks_from_setup(stock_list, setup, limit, report_hash, start_date=N
     analysis_data = {}
     log_file = f"logs/{report_hash}.log"
 
-    if end_date is None:
-        end_date = datetime.now()
-
     for ticker_code in stock_list:
         ticker = ticker_code['Code']
         print(f"Analyzing {ticker}...")
 
         try:
-            stock_data = fetch_yahoo_stock_data(ticker, start_date=start_date, end_date=end_date,
-                                                period=setup['Period'])
+            stock_data = fetch_yahoo_stock_data(ticker, start_date=start_date, end_date=end_date)
         except Exception as e:
             # Skip to next Ticket
             error_message = f"Error fetching data for {ticker} - {str(e)}"
             print(str(error_message))
             log_error(error_message, log_file)
             continue
+
+        # Add slope information to stock data
+        add_moving_average_slope(stock_data, setup)
 
         for analysis in setup['Analysis'].keys():
             for method in setup['Analysis'][analysis].keys():
@@ -61,8 +60,9 @@ def select_stocks_from_setup(stock_list, setup, limit, report_hash, start_date=N
                             if method == 'rsi':
                                 crossings = rsi(stock_data, setup, end_date=end_date)
 
-                        if not crossings.empty:
+                        if not crossings.empty and not is_trend_limited(crossings, setup):
                             print(f"Crossings found for {ticker} using {analysis}.")
+
                             crossings.index = [ticker] * len(crossings)
                             try:
                                 analysis_data[ticker]
@@ -71,8 +71,6 @@ def select_stocks_from_setup(stock_list, setup, limit, report_hash, start_date=N
 
                             analysis_data[ticker].update({method: crossings})
 
-                        else:
-                            print(f"No {analysis} crossings detected for {ticker}.")
                     except Exception as e:
                         error_message = f"Error analyzing {ticker}: {e}"
                         print(error_message)
@@ -96,6 +94,7 @@ def select_stocks_from_setup(stock_list, setup, limit, report_hash, start_date=N
 
 def backtest(analysis_data, start_date, end_date, setup, report_hash):
     log_file = f"logs/{report_hash}.log"
+
     backtest_data = {}
     backtest_data = defaultdict(lambda: defaultdict(dict), backtest_data)
 
@@ -103,7 +102,8 @@ def backtest(analysis_data, start_date, end_date, setup, report_hash):
         for ticker in analysis_data.keys():
             print(f"Backtesting {ticker}")
 
-            ticker_hist_data = fetch_yahoo_stock_data(ticker, start_date=start_date, end_date=end_date)
+            bt_start_date = start_date - relativedelta(days=get_pre_analysis_period(setup))
+            ticker_hist_data = fetch_yahoo_stock_data(ticker, start_date=bt_start_date, end_date=end_date)
             total_backtest_score = 0.0
 
             # Backtest Crossing Events Collection
@@ -149,7 +149,7 @@ def backtest(analysis_data, start_date, end_date, setup, report_hash):
                         backtest_data[ticker].update({method: bt_crossings})
 
             # Search for events along the crossings
-            analysis_start_date = start_date + relativedelta(days=get_pre_analysis_period(setup))
+            analysis_start_date = start_date
             analysis_day = analysis_start_date
 
             """ 
@@ -217,51 +217,10 @@ def backtest(analysis_data, start_date, end_date, setup, report_hash):
 
         return backtest_data
 
-    except Exception as e:
+    except ValueError as e:
         error_message = f"Error handling backtest data - {str(e)}"
         print(error_message)
-        log_error(error_message, log_file)
-
-
-def get_recommendation_period(start_date, period):
-    # String date format to datetime
-    try:
-        if isinstance(start_date, str):
-            start_date = datetime.strptime(start_date, "%Y-%m-%d")
-
-        backtest_end_date = start_date - relativedelta(days=1)
-
-        period_days = get_days_from_period(period)
-
-        backtest_start_date = backtest_end_date - relativedelta(days=period_days)
-
-        return [backtest_start_date, backtest_end_date]
-    except Exception as error:
-        logging.error(f"{error}")
-
-
-def get_pre_analysis_period(setup, calendar_days=True):
-    # Get the lengthiest period analysis from setup
-    period = 0
-
-    for analysis in setup['Analysis'].keys():
-        for method in setup['Analysis'][analysis].keys():
-            if 'period' in setup['Analysis'][analysis][method] and setup['Analysis'][analysis][method]['enabled']:
-                if period < setup['Analysis'][analysis][method]['period']:
-                    period = setup['Analysis'][analysis][method]['period']
-            elif 'long' in setup['Analysis'][analysis][method]:
-                if period < setup['Analysis'][analysis][method]['long']:
-                    period = setup['Analysis'][analysis][method]['long']
-
-    if calendar_days:
-        return int(period / 5) * 7 + (period % 5) + 7  # the last seven is an extra to cover holidays
-    else:
-        return period
-
-
-def get_backtest_start(start_date: datetime, setup):
-    start_date = start_date - relativedelta(days=get_pre_analysis_period(setup))
-    return start_date
+        logging.error(error_message)
 
 
 def get_position_results(setup):
@@ -315,3 +274,34 @@ def calculate_score(data, setup):
 
     score = score / total_score
     data.update({"score": score})
+
+
+def add_moving_average_slope(stock_data, setup):
+
+    # Add MA Period and calculate slope to data
+    for ma in setup['Thresholds']['Trend'].keys():
+        period = setup['Thresholds']['Trend'][ma]['period']
+        slope = setup['Thresholds']['Trend'][ma]['slope_period']
+
+        calculate_ma_slope(stock_data, ma_period=period, slope_period=slope, name=ma)
+
+
+def is_trend_limited(data, setup):
+
+    try:
+        # Check if data crossed trend limits
+        for trend in setup['Thresholds']['Trend'].keys():
+            if setup['Thresholds']['Trend'][trend]['enabled']:
+                limit = setup['Thresholds']['Trend'][trend]['slope']
+                recommendation = data['Cross'].values[0]
+                slope = data[f"MA_Slope_{trend}"].values[0]
+
+                if recommendation == "Buy" and slope < limit:
+                    return True
+                elif recommendation == "Sell" and slope > limit:
+                    return True
+
+        return False
+    except ValueError as e:
+        error_message = f"Failed to validate if data meets thresholds limitations - {str(e)}"
+        logging.error(error_message)

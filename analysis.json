@@ -57,15 +57,15 @@
     }
   },
     "Momentum": {
-    "rsi": {
-      "enabled": 1,
-      "period": 14,
-      "output_window": 3,
-      "lower": 30,
-      "upper": 70,
-      "weight": 3.0,
-      "name": "RSI"
-    }
+      "rsi": {
+        "enabled": 1,
+        "period": 14,
+        "output_window": 3,
+        "lower": 30,
+        "upper": 70,
+        "weight": 3.0,
+        "name": "RSI"
+      }
   }
   },
   "Volume": {},
@@ -102,14 +102,37 @@
   "Short": 1,
   "Observation": ["MSFT", "NVDA", "PLTR", "TSLA"],
   "Thresholds": {
-    "Buy": 0.4,
-    "Sell": -0.3
+    "Buy": 0.2,
+    "Sell": -0.4,
+    "Trend": {
+      "short": {
+        "enabled": 0,
+        "type": "sma",
+        "period": 5,
+        "slope_period": 3,
+        "slope": 0.0
+      },
+      "middle": {
+        "enabled": 1,
+        "type": "sma",
+        "period": 20,
+        "slope_period": 3,
+        "slope": 0.0
+      },
+      "long": {
+        "enabled": 1,
+        "type": "sma",
+        "period": 50,
+        "slope_period": 3,
+        "slope": 0.1
+      }
+    }
   },
   "Risk": {
     "Stop": {
       "enabled": 1,
       "warning": 0.01,
-      "margin": 0.02
+      "margin": 0.03
     }
   }
 }

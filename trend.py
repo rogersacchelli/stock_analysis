@@ -1,4 +1,5 @@
 import numpy as np
+from scipy import stats
 
 
 def calculate_ema(data, period=14):
@@ -207,3 +208,33 @@ def detect_macd_trend(stock_data, setup, end_date, backtest=False):
         return last_crossing
     else:
         return crossings
+
+
+def calculate_ma_slope(stock_data, ma_period, slope_period, name):
+    """
+    Calculate the slope of the moving average over the last 'slope_period'
+    values of an 'ma_period' moving average for a given stock symbol.
+
+    Parameters:
+    - stock_data: df, stock_data collected
+    - ma_period: int, the moving average period
+    - slope_period: int, period over which to calculate the slope (should be <= ma_period)
+    - start_date: str, starting date for data in 'YYYY-MM-DD' format
+    - end_date: str, ending date for data in 'YYYY-MM-DD' format
+
+    Returns:
+    - pandas.Series: Slope of the moving average for each period
+    """
+    # Calculate moving averages
+    stock_data[f"MA_{name}"] = stock_data['Close'].rolling(window=ma_period).mean()
+
+    # Calculate slope using linear regression for each window of 'slope_period'
+    def slope_calc(window):
+        if len(window) == slope_period:
+            x = np.arange(slope_period)
+            slope, _, _, _, _ = stats.linregress(x, window)
+            return slope
+        return np.nan
+
+    # Apply slope calculation to each moving average window
+    stock_data[f"MA_Slope_{name}"] = stock_data[f"MA_{name}"].rolling(window=slope_period).apply(slope_calc, raw=False)

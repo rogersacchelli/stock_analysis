@@ -2,9 +2,17 @@ import hashlib
 import argparse
 import logging
 from datetime import datetime
+from dateutil.relativedelta import relativedelta
 import os
 import numpy as np
+import json
 
+
+class LoadFromFile(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        with open(values, 'r') as config_file:
+            config_dict = json.load(config_file)
+        setattr(namespace, self.dest, config_dict)
 
 def get_hash(data):
 
@@ -33,10 +41,19 @@ def read_tickers_from_file(file_path):
     return tickers
 
 
-def valid_date(s: str) -> datetime or None:
+def valid_start_date(s: str) -> datetime:
     try:
         if s is None:
-            return None
+            return datetime.now() - relativedelta(days=365)
+        return datetime.strptime(s, "%Y-%m-%d")
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"not a valid date: {s!r}")
+
+
+def valid_end_date(s: str) -> datetime:
+    try:
+        if s is None:
+            return datetime.now()
         return datetime.strptime(s, "%Y-%m-%d")
     except ValueError:
         raise argparse.ArgumentTypeError(f"not a valid date: {s!r}")
@@ -85,67 +102,83 @@ def get_days_from_period(period):
 
 
 def analysis_to_file(analysis_data, setup, report_hash):
-    # Iterate through dict printing analysis data
 
-    current_date = datetime.now().strftime('%Y-%m-%d')
+    logging.info(f"Saving analysis to file {report_hash}.csv")
 
-    # Output file based on user settings
-    with open(f"reports/{report_hash}.csv", mode='a') as f:
+    try:
 
-        header = "Ticker,Report Date"
+        current_date = datetime.now().strftime('%Y-%m-%d')
 
-        # Create Header based on analysis settings
-        analysis_list = ["Trend", "Momentum"]
+        # Output file based on user settings
+        with open(f"reports/{report_hash}.csv", mode='a') as f:
 
-        for analysis in setup['Analysis'].keys():
-            for method in setup['Analysis'][analysis].keys():
-                if setup['Analysis'][analysis][method]['enabled']:
-                    name = setup['Analysis'][analysis][method]['name']
-                    header = f"{header},{name}"
+            header = "Ticker,Report Date"
 
-        f.write(header + '\n')
+            # Create Header based on analysis settings
+            analysis_list = ["Trend", "Momentum"]
 
-        # Add data per ticker
-        for ticker in analysis_data.keys():
+            for analysis in setup['Analysis'].keys():
+                for method in setup['Analysis'][analysis].keys():
+                    if setup['Analysis'][analysis][method]['enabled']:
+                        name = setup['Analysis'][analysis][method]['name']
+                        header = f"{header},{name}"
 
-            score = analysis_data[ticker]['score']
+            f.write(header + '\n')
 
-            if score >= setup['Thresholds']['Buy'] or score <= setup['Thresholds']['Sell']:
-                analysis_output = f"{ticker},{current_date}"
+            # Add data per ticker
+            for ticker in analysis_data.keys():
 
-                for analysis in setup['Analysis'].keys():
-                    for method in setup['Analysis'][analysis].keys():
-                        if setup['Analysis'][analysis][method]['enabled']:
-                            try:
-                                recommendation = analysis_data[ticker][method]['Cross'].values[0]
-                                analysis_output += f",{recommendation}"
-                            except KeyError as ke:
-                                error_message = f"No {str(ke)} analysis found for {ticker}"
-                                print(error_message)
-                                log_error(error_message, f"logs/{report_hash}.log")
-                                analysis_output += ","
+                score = analysis_data[ticker]['score']
 
-                f.write(analysis_output + '\n')
-            else:
-                print(f"{ticker} did not meet minimum score with {round(score, 2)}")
+                if score >= setup['Thresholds']['Buy'] or score <= setup['Thresholds']['Sell']:
+                    analysis_output = f"{ticker},{current_date}"
 
-        f.close()
+                    for analysis in setup['Analysis'].keys():
+                        for method in setup['Analysis'][analysis].keys():
+                            if setup['Analysis'][analysis][method]['enabled']:
+                                try:
+                                    recommendation = analysis_data[ticker][method]['Cross'].values[0]
+                                    analysis_output += f",{recommendation}"
+                                except KeyError as ke:
+                                    error_message = f"No {str(ke)} analysis found for {ticker}"
+                                    print(error_message)
+                                    log_error(error_message, f"logs/{report_hash}.log")
+                                    analysis_output += ","
+
+                    f.write(analysis_output + '\n')
+                else:
+                    print(f"{ticker} did not meet minimum score with {round(score, 2)}")
+
+            f.close()
+
+    except ValueError as e:
+        logging.error("Failed to write analysis to file")
 
 
 def backtest_to_file(analysis_data, backtest_data, setup, report_hash):
+
+    logging.info(f"Saving backtest to file {report_hash}-bt.csv")
+    slopes = {}
 
     try:
         with open(f"reports/{report_hash}-bt.csv", mode='a') as f:
             header = "Ticker,Analysis Recommendation"
             for analysis in setup['Analysis'].keys():
+
                 for method in setup['Analysis'][analysis].keys():
                     if setup['Analysis'][analysis][method]['enabled']:
                         header += f",{method}_price_start,{method}_date_start,{method}_price_end,{method}_date_end"
-                    if setup['Risk']['Stop']['enabled']:
-                        header += f",gain,period,stop_date,effective_gain,effective_period\n"
-                    else:
-                        header += f",gain,period\n"
-                f.write(header)
+
+            for trend_thold in setup['Thresholds']['Trend'].keys():
+                if setup['Thresholds']['Trend'][trend_thold]['enabled']:
+                    header += f",{trend_thold}_slope"
+                    slopes.update({trend_thold: []})
+
+            if setup['Risk']['Stop']['enabled']:
+                header += f",gain,period,stop_date,effective_gain,effective_period\n"
+            else:
+                header += f",gain,period\n"
+            f.write(header)
 
             for ticker in backtest_data.keys():
                 # Get results recommendation for ticket
@@ -154,25 +187,33 @@ def backtest_to_file(analysis_data, backtest_data, setup, report_hash):
                 date_start = []
                 date_end = []
 
+
                 for result_date in backtest_data[ticker]['results'].keys():
                     # Add result to file
                     recommendation = 'Buy' if analysis_data[ticker]['score'] > 0.0 else 'Sell'
                     result_output = f"{ticker},{recommendation}"
+
                     for analysis in setup['Analysis'].keys():
                         for method in setup['Analysis'][analysis].keys():
                             # Add Analysis Data
                             if setup['Analysis'][analysis][method]['enabled']:
                                 try:
-                                    if method in analysis_data[ticker]:
-                                        date = analysis_data[ticker][method]['Date'].values[0].astype('datetime64[D]')
-                                        result_output += f",{round(analysis_data[ticker][method]['Close'].values[0], 2)}," \
-                                                         f"{date}"
-                                        price_start.append(round(analysis_data[ticker][method]['Close'].values[0], 2))
-                                        date_start.append(date)
+                                    date = analysis_data[ticker][method]['Date'].values[0].astype('datetime64[D]')
+                                    result_output += f",{round(analysis_data[ticker][method]['Close'].values[0], 2)}," \
+                                                     f"{date}"
+                                    price_start.append(round(analysis_data[ticker][method]['Close'].values[0], 2))
+                                    date_start.append(date)
+
+                                    for trend_thold in setup['Thresholds']['Trend'].keys():
+                                        if setup['Thresholds']['Trend'][trend_thold]['enabled']:
+                                            slope = round(analysis_data[ticker][method][f"MA_Slope_{trend_thold}"].values[0],3)
+                                            slopes[trend_thold].append(slope)
+
                                 except KeyError as e:
                                     error_message = f"{str(e)} for {ticker} for backtest analysis"
                                     print(error_message)
                                     result_output += ',,'
+
                                 # Add Backtest Data
                                 try:
                                     date = backtest_data[ticker]['results'][result_date][method]['Date'].values[0].astype(
@@ -186,6 +227,12 @@ def backtest_to_file(analysis_data, backtest_data, setup, report_hash):
                                     error_message = f"{str(e)} for {ticker} for backtest analysis"
                                     print(error_message)
                                     result_output += ',,'
+
+                    # Add final slopes
+                    for k in slopes.keys():
+                        avg_slope = round(sum(slopes[k]) / len(slopes[k]), 3)
+                        result_output += f",{avg_slope}"
+                        slopes[k] = []  # Clear previous data
 
                     gain = round(100 * (max(price_end) - max(price_start)) / max(price_start), 2)
 
@@ -211,7 +258,9 @@ def backtest_to_file(analysis_data, backtest_data, setup, report_hash):
 
                     f.write(result_output + '\n')
         f.close()
-    except Exception as error:
+        print(f"Report saved in reports/{report_hash}-bt.csv")
+
+    except ValueError as error:
         logging.error(str(error))
 
 
@@ -235,3 +284,41 @@ def position_results_to_file(position_results, setup, hash):
                     output = f"{ticker},{date},{price_start},{price_end},{volume},{gain},{period}, {profit}\n"
                 f.write(output)
     f.close()
+
+
+def get_pre_analysis_period(setup, calendar_days=True):
+    # Get the lengthiest period analysis from setup
+    period = 0
+
+    for analysis in setup['Analysis'].keys():
+        for method in setup['Analysis'][analysis].keys():
+            if 'period' in setup['Analysis'][analysis][method] and setup['Analysis'][analysis][method]['enabled']:
+                if period < setup['Analysis'][analysis][method]['period']:
+                    period = setup['Analysis'][analysis][method]['period']
+            elif 'long' in setup['Analysis'][analysis][method]:
+                if period < setup['Analysis'][analysis][method]['long']:
+                    period = setup['Analysis'][analysis][method]['long']
+
+    for trend_period in setup['Thresholds']['Trend'].keys():
+        if period < setup['Thresholds']['Trend'][trend_period]['period']:
+            period = setup['Thresholds']['Trend'][trend_period]['period']
+
+    if calendar_days:
+        return int(period / 5) * 7 + (period % 5) + 7  # the last seven is an extra to cover holidays
+    else:
+        return period
+
+
+def get_stock_selection_dates(start_date: datetime, setup, backtest=False):
+
+    analysis_days = get_days_from_period(setup['Period']) + get_pre_analysis_period(setup)
+
+    if backtest:
+        end_date = start_date - relativedelta(hours=1) # Data up to day prior of backtest start_date
+    else:
+        end_date = datetime.today()
+
+    start_date = end_date - relativedelta(days=analysis_days)
+
+    return start_date, end_date
+
