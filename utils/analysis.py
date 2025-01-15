@@ -94,7 +94,7 @@ def select_stocks_from_setup(stock_list, setup, limit, report_hash, start_date=N
     return analysis_data
 
 
-def backtest(analysis_data, start_date, end_date, setup, report_hash):
+def backtest(analysis_data, start_date, end_date, setup):
 
     backtest_data = {}
     backtest_data = defaultdict(lambda: defaultdict(dict), backtest_data)
@@ -366,16 +366,16 @@ def get_position_results(setup):
             for date in setup['Position'][ticker].keys():
                 # Get the latest price for stock
                 # "Ticker,Price Start,Price End,Date Start,Gain,Period\n"
-                date_start = datetime.strptime(date, "%Y-%m-%d")
+                start_date = datetime.strptime(date, "%Y-%m-%d")
                 end_date = datetime.today()
-                stock_data = fetch_yahoo_stock_data(ticker, start_date=None, end_date=end_date, period='1d')
+                stock_data = fetch_yahoo_stock_data(ticker, start_date=start_date, end_date=end_date)
 
                 price_start = setup['Position'][ticker][date]['price']
                 volume = setup['Position'][ticker][date]['volume']
 
                 price_end = round(stock_data['Close'].tail(1).values[0], 2)
                 gain = round(100 * (price_end - price_start) / price_start, 2)
-                position_period = datetime.now() - date_start
+                position_period = datetime.now() - start_date
 
                 results[ticker].update({date: {"price_start": price_start, "price_end": price_end, "gain": gain,
                                                "volume": volume, "period": position_period}})

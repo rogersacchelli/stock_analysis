@@ -40,7 +40,14 @@ def read_tickers_from_file(file_path):
     return tickers
 
 
-def valid_start_date(s) -> datetime:
+def valid_date(s: str) -> datetime:
+    try:
+        return datetime.strptime(s, "%Y-%m-%d")
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"not a valid date: {s!r}")
+
+
+def valid_start_date(s: str) -> datetime:
     try:
         if s is None:
             return datetime.now() - relativedelta(days=365)
@@ -145,8 +152,6 @@ def analysis_to_file(analysis_data, setup, report_hash):
                                     analysis_output += ","
 
                     f.write(analysis_output + '\n')
-                else:
-                    print(f"{ticker} did not meet minimum score with {round(score, 2)}")
 
             f.close()
 
