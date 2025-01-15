@@ -3,9 +3,10 @@ import pandas as pd
 from utils.analysis import *
 from utils.mail import mail_analysis
 from utils.utils import get_hash, create_directories_if_not_exist, position_results_to_file, \
-    analysis_to_file, backtest_to_file, get_stock_selection_dates, valid_start_date, valid_end_date, LoadFromFile
+    analysis_to_file, get_stock_selection_dates, valid_end_date, LoadFromFile
 
 pd.options.mode.chained_assignment = None
+
 
 def main():
 
@@ -17,20 +18,20 @@ def main():
                         help="Input file containing stock tickers in JSON format.")
     parser.add_argument('-e', '--email', help="Email address to send results.")
     parser.add_argument('-c', '--config', required=True, action=LoadFromFile, help="Configuration File.")
-    parser.add_argument('-a', '--analysis', required=True, action=LoadFromFile, help="Analysis Definition File.")
+    parser.add_argument('-s', '--setup', required=True, action=LoadFromFile, help="Setup definition File.")
     parser.add_argument('-l', '--limit', type=int, default=500, help="Limit the number of stocks processed.")
     parser.add_argument('-b', '--backtest', action="store_true",
                         help="Backtest mode provides recommended stocks prior to start date and assess the "
                              "recommendation over specified the specified period. If no dates are specified, "
                              "default period starts as 1y ago until now.")
-    parser.add_argument('-sd', '--bt_start_date', type=valid_start_date,
+    parser.add_argument('-sd', '--bt_start_date', default=datetime.today()-relativedelta(years=1),
                         help="The start date which is intended to assess the recommended stocks - format YYYY-MM-DD")
-    parser.add_argument('-ed', '--bt_end_date', type=valid_end_date,
+    parser.add_argument('-ed', '--bt_end_date', default=datetime.today(), type=valid_end_date,
                         help="The end date of evaluation - format YYYY-MM-DD")
     args = parser.parse_args()
 
     config = args.config
-    setup = args.analysis
+    setup = args.setup
     ticker_list = args.input
     limit = args.limit
 
@@ -57,8 +58,6 @@ def main():
 
     if args.backtest:
         try:
-            # Determining the stocks for the backtest analysis requires setting the end-date as the start-date
-            # Start date is the end-date minus the period required of assessment, defined on the setup period.
 
             # ----------------------- Backtest -----------------------
             backtest_start_date = args.bt_start_date

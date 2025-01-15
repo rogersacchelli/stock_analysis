@@ -1,0 +1,149 @@
+{
+  "Stocks": {
+    "Tickers": "AMD, ABBV, ALB, AAL, CPB, TSLA"
+  },
+  "Analysis": {
+    "Trend": {
+      "long_term": {
+        "enabled": 1,
+        "period": 40,
+        "rate": 0.01,
+        "output_window": 5,
+        "avg_type": "sma",
+        "weight": 1.0,
+        "name": "Long Term Crossing"
+      },
+      "sma_cross": {
+        "enabled": 1,
+        "long": 20,
+        "short": 5,
+        "output_window": 5,
+        "weight": 1.0,
+        "name": "SMA Cross"
+      },
+      "ema_cross": {
+        "enabled": 0,
+        "long": 20,
+        "short": 5,
+        "output_window": 5,
+        "weight": 1.0,
+        "name": "EMA Cross"
+      },
+      "bollinger_bands": {
+        "enabled": 1,
+        "avg_type": "sma",
+        "period": 20,
+        "output_window": 3,
+        "std_dev": 2,
+        "weight": 1.0,
+        "name": "Bollinger Bands"
+      },
+      "week_rule": {
+        "enabled": 0,
+        "period": 4,
+        "output_window": 5,
+        "weight": 1.0,
+        "name": "Week Rule"
+      },
+      "macd": {
+        "enabled": 1,
+        "average_type": "ema",
+        "short": 5,
+        "long": 20,
+        "signal_window": 9,
+        "output_window": 5,
+        "weight": 2.0,
+        "name": "MACD"
+      }
+  },
+    "Momentum": {
+      "rsi": {
+        "enabled": 1,
+        "period": 14,
+        "output_window": 3,
+        "lower": 30,
+        "upper": 70,
+        "weight": 3.0,
+        "name": "RSI"
+      }
+  }
+  },
+  "Volume": {},
+  "Sup/Res": {},
+  "Volatility": {},
+  "Patterns": {},
+  "Cycles": {},
+  "Sentiment": {},
+  "Period": "3mo",
+  "Position": {
+    "COST":{
+      "2025-01-08": {
+        "price": 924.50,
+        "volume": 3
+      },
+      "2025-01-06": {
+        "price": 919.09,
+        "volume": 2
+      }
+    },
+    "VOO":{
+      "2024-04-20": {
+        "price": 1.0,
+        "volume": 2
+      }
+    },
+    "VT":{
+      "2024-01-20": {
+        "price": 10.1,
+        "volume": 4
+      }
+    }
+  },
+  "Short": 1,
+  "Observation": ["MSFT", "NVDA", "PLTR", "TSLA"],
+  "Filters": {
+    "Trend": {
+      "short": {
+        "enabled": 0,
+        "type": "sma",
+        "period": 5,
+        "slope_period": 3,
+        "slope": 0.0
+      },
+      "middle": {
+        "enabled": 0,
+        "type": "sma",
+        "period": 20,
+        "slope_period": 3,
+        "slope": 0.0
+      },
+      "long": {
+        "enabled": 0,
+        "type": "sma",
+        "period": 50,
+        "slope_period": 3,
+        "slope": 0.1
+      }
+    },
+    "Momentum": {
+      "adx": {
+        "enabled": 1,
+        "adx": 25,
+        "di+": 25,
+        "di-": 25,
+        "period": 14
+      }
+    }
+  },
+  "Thresholds": {
+    "Buy": 0.2,
+    "Sell": -0.4
+  },
+  "Risk": {
+    "Stop": {
+      "enabled": 1,
+      "warning": 0.01,
+      "margin": 0.03
+    }
+  }
+}

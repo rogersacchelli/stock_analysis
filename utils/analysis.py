@@ -1,7 +1,7 @@
-from momentum import rsi
+from momentum import rsi, add_adx
 import logging
 from risk import get_stop_data
-from utils.utils import log_error, get_days_from_period, get_pre_analysis_period
+from utils.utils import log_error, get_pre_analysis_period, store_filter_data, get_filter_data
 from data_aquisition import fetch_yahoo_stock_data
 from dateutil.relativedelta import relativedelta
 from collections import defaultdict
@@ -28,6 +28,8 @@ def select_stocks_from_setup(stock_list, setup, limit, report_hash, start_date=N
 
         # Add slope information to stock data
         add_moving_average_slope(stock_data, setup)
+        # Add ADX
+        stock_data = add_adx(stock_data, setup)
 
         for analysis in setup['Analysis'].keys():
             for method in setup['Analysis'][analysis].keys():
@@ -60,7 +62,7 @@ def select_stocks_from_setup(stock_list, setup, limit, report_hash, start_date=N
                             if method == 'rsi':
                                 crossings = rsi(stock_data, setup, end_date=end_date)
 
-                        if not crossings.empty and not is_trend_limited(crossings, setup):
+                        if not crossings.empty and not analysis_filter(crossings, setup):
                             print(f"Crossings found for {ticker} using {analysis}.")
 
                             crossings.index = [ticker] * len(crossings)
@@ -93,7 +95,6 @@ def select_stocks_from_setup(stock_list, setup, limit, report_hash, start_date=N
 
 
 def backtest(analysis_data, start_date, end_date, setup, report_hash):
-    log_file = f"logs/{report_hash}.log"
 
     backtest_data = {}
     backtest_data = defaultdict(lambda: defaultdict(dict), backtest_data)
@@ -223,6 +224,137 @@ def backtest(analysis_data, start_date, end_date, setup, report_hash):
         logging.error(error_message)
 
 
+def create_backtest_report_heading(setup, filter_data):
+
+    header = "Ticker,Analysis Recommendation"
+    for analysis in setup['Analysis'].keys():
+
+        for method in setup['Analysis'][analysis].keys():
+            if setup['Analysis'][analysis][method]['enabled']:
+                header += f",{method}_price_start,{method}_date_start,{method}_price_end,{method}_date_end"
+
+    # Filter heading
+    for ft in setup['Filters'].keys():
+        filter_data.update({ft: {}})
+        for filter in setup['Filters'][ft].keys():
+            if ft == "Trend":
+                header += f",{ft.lower()}_{filter}"
+                filter_data[ft].update({filter: []})
+            elif ft == "Momentum":
+                if filter == "adx":
+                    filter_data[ft].update({filter: {"ADX": [], "+DI": [], "-DI": []}})
+                    header += f",{filter},{filter}_d+,{filter}_d-"
+
+    if setup['Risk']['Stop']['enabled']:
+        header += f",gain,period,stop_date,effective_gain,effective_period\n"
+    else:
+        header += f",gain,period\n"
+
+    return header
+
+
+def get_backtest_result(ticker, backtest_stock_data, analysis_stock_data, setup):
+
+    filter_data = {}
+    filter_data = defaultdict(lambda: defaultdict(dict), filter_data)
+
+    price_start = []
+    price_end = []
+    date_start = []
+    date_end = []
+
+    for result_date in backtest_stock_data['results'].keys():
+        # Add result to file
+        recommendation = 'Buy' if analysis_stock_data['score'] > 0.0 else 'Sell'
+        result_output = f"{ticker},{recommendation}"
+
+        for analysis in setup['Analysis'].keys():
+            for method in setup['Analysis'][analysis].keys():
+                # Add Analysis Data
+                if setup['Analysis'][analysis][method]['enabled']:
+                    try:
+                        date = analysis_stock_data[method]['Date'].values[0].astype('datetime64[D]')
+                        result_output += f",{round(analysis_stock_data[method]['Close'].values[0], 2)}," \
+                                         f"{date}"
+                        price_start.append(round(analysis_stock_data[method]['Close'].values[0], 2))
+                        date_start.append(date)
+
+                        # Store filter variables data
+                        store_filter_data(filter_data, method, analysis_stock_data, setup)
+
+                    except KeyError as e:
+                        error_message = f"{str(e)} for {ticker} for backtest analysis"
+                        print(error_message)
+                        result_output += ',,'
+
+                    # Add Backtest Data
+                    try:
+                        date = backtest_stock_data['results'][result_date][method]['Date'].values[0].astype(
+                            'datetime64[D]')
+                        result_output += f",{round(backtest_stock_data['results'][result_date][method]['Close'].values[0], 2)}," \
+                                         f"{date}"
+                        price_end.append(round(backtest_stock_data
+                                               ['results'][result_date][method]['Close'].values[0], 2))
+                        date_end.append(date)
+                    except KeyError as e:
+                        error_message = f"{str(e)} for {ticker} for backtest analysis"
+                        print(error_message)
+                        result_output += ',,'
+
+        # Add final slopes
+        result_output = get_filter_data(filter_data, result_output)
+
+        gain = round(100 * (max(price_end) - max(price_start)) / max(price_start), 2)
+
+        if recommendation == "Sell":
+            gain *= -1
+
+        period = str((max(date_end) - max(date_start))).replace("days", "")
+        result_output += f",{gain},{period}"
+
+        effective_gain = gain
+        effective_period = period
+
+        if setup['Risk']['Stop']['enabled'] and 'stop' in backtest_stock_data:
+
+            stop_date = backtest_stock_data['stop']['date']
+
+            if stop_date <= min(date_end):
+                effective_gain = setup['Risk']['Stop']['margin'] * 100 * (-1.0)
+                effective_period = np.datetime64(backtest_stock_data['stop']['date']) - max(date_start)
+                effective_period = str(effective_period).replace("days", "")
+
+            result_output += f",{stop_date},{effective_gain},{effective_period}"
+
+    return result_output
+
+
+def backtest_to_file(analysis_data, backtest_data, setup, report_hash):
+
+    logging.info(f"Saving backtest to file {report_hash}-bt.csv")
+    filter_data = {}
+
+    try:
+        with open(f"reports/{report_hash}-bt.csv", mode='a') as f:
+
+            header = create_backtest_report_heading(setup, filter_data)
+            f.write(header)
+
+            for ticker in backtest_data.keys():
+
+                result_output = get_backtest_result(ticker=ticker,
+                                                    backtest_stock_data=backtest_data[ticker],
+                                                    analysis_stock_data=analysis_data[ticker],
+                                                    setup=setup)
+
+                f.write(result_output + '\n')
+        f.close()
+        print(f"Report saved in reports/{report_hash}-bt.csv")
+
+    except ValueError as error:
+        logging.error(str(error))
+
+
 def get_position_results(setup):
     results = {}
     for ticker in setup['Position'].keys():
@@ -279,27 +411,29 @@ def calculate_score(data, setup):
 def add_moving_average_slope(stock_data, setup):
 
     # Add MA Period and calculate slope to data
-    for ma in setup['Thresholds']['Trend'].keys():
-        period = setup['Thresholds']['Trend'][ma]['period']
-        slope = setup['Thresholds']['Trend'][ma]['slope_period']
+    for ma in setup['Filters']['Trend'].keys():
+        period = setup['Filters']['Trend'][ma]['period']
+        slope = setup['Filters']['Trend'][ma]['slope_period']
 
         calculate_ma_slope(stock_data, ma_period=period, slope_period=slope, name=ma)
 
 
-def is_trend_limited(data, setup):
+def analysis_filter(data, setup):
 
     try:
         # Check if data crossed trend limits
-        for trend in setup['Thresholds']['Trend'].keys():
-            if setup['Thresholds']['Trend'][trend]['enabled']:
-                limit = setup['Thresholds']['Trend'][trend]['slope']
-                recommendation = data['Cross'].values[0]
-                slope = data[f"MA_Slope_{trend}"].values[0]
+        for ft in setup['Filters'].keys():
+            for filter in setup['Filters'][ft].keys():
+                if setup['Filters'][ft][filter]['enabled']:
+                    if ft == 'Trend':
+                        limit = setup['Filters'][ft][filter]['slope']
+                        recommendation = data['Cross'].values[0]
+                        slope = data[f"MA_Slope_{filter}"].values[0]
 
-                if recommendation == "Buy" and slope < limit:
-                    return True
-                elif recommendation == "Sell" and slope > limit:
-                    return True
+                        if recommendation == "Buy" and slope < limit:
+                            return True
+                        elif recommendation == "Sell" and slope > limit:
+                            return True
 
         return False
     except ValueError as e:
