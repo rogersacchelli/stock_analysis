@@ -17,6 +17,7 @@ def main():
     parser.add_argument('-i', '--input', required=True, action=LoadFromFile,
                         help="Input file containing stock tickers in JSON format.")
     parser.add_argument('-e', '--email', help="Email address to send results.")
+    parser.add_argument('-es','--subject',default="Report Analysis", help="Email subject to send results.")
     parser.add_argument('-c', '--config', required=True, action=LoadFromFile, help="Configuration File.")
     parser.add_argument('-s', '--setup', required=True, action=LoadFromFile, help="Setup definition File.")
     parser.add_argument('-l', '--limit', type=int, default=500, help="Limit the number of stocks processed.")
@@ -87,7 +88,7 @@ def main():
     # Send Email if required and not backtest
     if args.email and not args.backtest:
 
-        mail_analysis(report_hash, setup, config, args.email)
+        mail_analysis(report_hash, setup, config, args.email, subject=args.subject)
 
     else:
         print("No results to send via email.")

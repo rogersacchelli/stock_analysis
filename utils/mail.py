@@ -88,7 +88,7 @@ def csv_to_html(input_file, position=None):
     return html_output
 
 
-def mail_analysis(report_hash, setup, config, rctp):
+def mail_analysis(report_hash, setup, config, rctp, subject):
 
     date = datetime.now().strftime("%Y-%m-%d")
 
@@ -106,5 +106,5 @@ def mail_analysis(report_hash, setup, config, rctp):
                     <p style="font-family: 'Courier New', Courier, monospace;">** Lower or equal to stop margin</p>
                     </body></html>"""
 
-    send_html_email(receiver_email=rctp, subject=f"Stock Analysis {date}",
+    send_html_email(receiver_email=rctp, subject=f"{subject} {date}",
                     config=config, html_content=body)
