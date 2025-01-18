@@ -63,7 +63,7 @@ def select_stocks_from_setup(stock_list, setup, limit, start_date=None, end_date
 
                         if not crossings.empty:
                             if not analysis_filter(crossings, setup):
-                                logger.debug(f"Crossings found for {ticker} using {analysis}.")
+                                logger.debug(f"Crossings found for {ticker} using {method}.")
 
                                 crossings.index = [ticker] * len(crossings)
                                 try:
@@ -75,7 +75,7 @@ def select_stocks_from_setup(stock_list, setup, limit, start_date=None, end_date
                             else:
                                 logger.debug(f"{analysis} filtered out for {ticker}.")
                         else:
-                            logger.debug(f"No crossings found for {ticker} using {analysis}.")
+                            logger.debug(f"No crossings found for {ticker} using {method}.")
 
                     except Exception as e:
                         error_message = f"Error analyzing {ticker}: {e}"
