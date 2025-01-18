@@ -1,3 +1,4 @@
+import logging
 import smtplib
 import csv
 from email.mime.multipart import MIMEMultipart
@@ -46,10 +47,10 @@ def send_html_email(receiver_email, subject, html_content,
             server.login(sender_email, password)
             server.sendmail(sender_email, receiver_email, msg.as_string())
 
-        print("Email sent successfully!")
+        logging.info("Email sent successfully!")
 
     except Exception as e:
-        print(f"Error sending email: {e}")
+        logging.error(f"Error sending email: {e}")
 
 
 def csv_to_html(input_file, position=None):
@@ -88,11 +89,11 @@ def csv_to_html(input_file, position=None):
     return html_output
 
 
-def mail_analysis(report_hash, setup, config, rctp, subject):
+def mail_analysis(report_hash, setup, config, rctp, subject, position):
 
     date = datetime.now().strftime("%Y-%m-%d")
 
-    report_data = csv_to_html(f"reports/{report_hash}.csv", position=list(setup['Position'].keys()))
+    report_data = csv_to_html(f"reports/{report_hash}.csv", position=list(position['Position'].keys()))
     position_data = csv_to_html(f"reports/{report_hash}-position.csv", position=[])
 
     body = f"""<html> \

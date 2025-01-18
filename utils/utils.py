@@ -13,6 +13,7 @@ class LoadFromFile(argparse.Action):
             config_dict = json.load(config_file)
         setattr(namespace, self.dest, config_dict)
 
+
 def get_hash(data):
 
     md5_hash = hashlib.md5()
@@ -22,6 +23,32 @@ def get_hash(data):
     hex_digest = md5_hash.hexdigest()
 
     return hex_digest
+
+
+def enable_logging(verbose):
+    # Create a custom logger
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.WARNING)  # Set the logging level to DEBUG
+
+    # Create handlers
+    # File handler for writing logs to a file
+    file_handler = logging.FileHandler('app.log')
+    file_handler.setLevel(logging.WARNING)
+
+    # Stream handler for writing logs to stdout
+    stream_handler = logging.StreamHandler()
+    stream_handler.setLevel(logging.WARNING)
+
+    # Create formatters and add it to handlers
+    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    file_handler.setFormatter(formatter)
+    stream_handler.setFormatter(formatter)
+
+    # Add handlers to the logger
+    logger.addHandler(file_handler)
+
+    if verbose:
+        logger.addHandler(stream_handler)
 
 
 # Function to log errors
@@ -82,7 +109,7 @@ def create_directories_if_not_exist(path):
     # Check if the directory exists, if not, create it
     if not os.path.exists(path):
         os.makedirs(path)
-        print(f"Directory '{path}' created successfully.")
+        logging.info(f"Directory '{path}' created successfully.")
 
 
 def get_days_from_period(period):
@@ -147,7 +174,6 @@ def analysis_to_file(analysis_data, setup, report_hash):
                                     analysis_output += f",{recommendation}"
                                 except KeyError as ke:
                                     error_message = f"No {str(ke)} analysis found for {ticker}"
-                                    print(error_message)
                                     log_error(error_message, f"logs/{report_hash}.log")
                                     analysis_output += ","
 

@@ -1,7 +1,7 @@
 from momentum import rsi, add_adx
 import logging
 from risk import get_stop_data
-from utils.utils import log_error, get_pre_analysis_period, store_filter_data, get_filter_data
+from utils.utils import get_pre_analysis_period, store_filter_data, get_filter_data
 from data_aquisition import fetch_yahoo_stock_data
 from dateutil.relativedelta import relativedelta
 from collections import defaultdict
@@ -9,21 +9,19 @@ from trend import *
 from datetime import datetime
 
 
-def select_stocks_from_setup(stock_list, setup, limit, report_hash, start_date=None, end_date=None):
+def select_stocks_from_setup(stock_list, setup, limit, start_date=None, end_date=None):
     analysis_data = {}
-    log_file = f"logs/{report_hash}.log"
 
     for ticker_code in stock_list:
         ticker = ticker_code['Code']
-        print(f"Analyzing {ticker}...")
+        logging.info(f"Analyzing {ticker}...")
 
         try:
             stock_data = fetch_yahoo_stock_data(ticker, start_date=start_date, end_date=end_date)
         except Exception as e:
             # Skip to next Ticket
             error_message = f"Error fetching data for {ticker} - {str(e)}"
-            print(str(error_message))
-            log_error(error_message, log_file)
+            logging.error(str(error_message))
             continue
 
         # Add slope information to stock data
@@ -62,24 +60,30 @@ def select_stocks_from_setup(stock_list, setup, limit, report_hash, start_date=N
                             if method == 'rsi':
                                 crossings = rsi(stock_data, setup, end_date=end_date)
 
-                        if not crossings.empty and not analysis_filter(crossings, setup):
-                            print(f"Crossings found for {ticker} using {analysis}.")
+                        is_filtered = analysis_filter(crossings, setup)
+                        if not crossings.empty:
+                            if not is_filtered:
+                                logging.debug(f"Crossings found for {ticker} using {analysis}.")
 
-                            crossings.index = [ticker] * len(crossings)
-                            try:
-                                analysis_data[ticker]
-                            except KeyError:
-                                analysis_data.update({ticker: {}})
+                                crossings.index = [ticker] * len(crossings)
+                                try:
+                                    analysis_data[ticker]
+                                except KeyError:
+                                    analysis_data.update({ticker: {}})
 
-                            analysis_data[ticker].update({method: crossings})
+                                analysis_data[ticker].update({method: crossings})
+                            else:
+                                logging.debug(f"{analysis} filtered out for {ticker}.")
+                        else:
+                            logging.debug(f"No crossings found for {ticker} using {analysis}.")
 
                     except Exception as e:
                         error_message = f"Error analyzing {ticker}: {e}"
-                        print(error_message)
-                        log_error(error_message, log_file)
+                        logging.error(error_message)
 
         # Keep Analysis if higher then thresholds
         if ticker in analysis_data:
+            logging.debug(f"Checking score for {ticker}")
             calculate_score(analysis_data[ticker], setup)
 
             if setup['Risk']['Stop']['enabled']:
@@ -99,12 +103,14 @@ def backtest(analysis_data, start_date, end_date, setup):
     backtest_data = {}
     backtest_data = defaultdict(lambda: defaultdict(dict), backtest_data)
 
-    try:
-        for ticker in analysis_data.keys():
-            print(f"Backtesting {ticker}")
+    for ticker in analysis_data.keys():
+        try:
+            logging.info(f"Backtesting {ticker}")
 
             bt_start_date = start_date - relativedelta(days=get_pre_analysis_period(setup))
+
             ticker_hist_data = fetch_yahoo_stock_data(ticker, start_date=bt_start_date, end_date=end_date)
+
             total_backtest_score = 0.0
 
             # Backtest Crossing Events Collection
@@ -216,12 +222,11 @@ def backtest(analysis_data, start_date, end_date, setup):
                 if stop_price is not None:
                     backtest_data[ticker].update({'stop': {'price': stop_price, 'date': stop_date}})
 
-        return backtest_data
+        except ValueError as e:
+            error_message = f"Error handling backtest data - {str(e)}"
+            logging.error(error_message)
 
-    except ValueError as e:
-        error_message = f"Error handling backtest data - {str(e)}"
-        print(error_message)
-        logging.error(error_message)
+    return backtest_data
 
 
 def create_backtest_report_heading(setup, filter_data):
@@ -263,68 +268,75 @@ def get_backtest_result(ticker, backtest_stock_data, analysis_stock_data, setup)
     date_start = []
     date_end = []
 
+    result_output = ""
+
     for result_date in backtest_stock_data['results'].keys():
         # Add result to file
         recommendation = 'Buy' if analysis_stock_data['score'] > 0.0 else 'Sell'
         result_output = f"{ticker},{recommendation}"
 
-        for analysis in setup['Analysis'].keys():
-            for method in setup['Analysis'][analysis].keys():
-                # Add Analysis Data
-                if setup['Analysis'][analysis][method]['enabled']:
-                    try:
-                        date = analysis_stock_data[method]['Date'].values[0].astype('datetime64[D]')
-                        result_output += f",{round(analysis_stock_data[method]['Close'].values[0], 2)}," \
-                                         f"{date}"
-                        price_start.append(round(analysis_stock_data[method]['Close'].values[0], 2))
-                        date_start.append(date)
+        try:
 
-                        # Store filter variables data
-                        store_filter_data(filter_data, method, analysis_stock_data, setup)
+            for analysis in setup['Analysis'].keys():
+                for method in setup['Analysis'][analysis].keys():
+                    # Add Analysis Data
+                    if setup['Analysis'][analysis][method]['enabled']:
+                        try:
+                            date = analysis_stock_data[method]['Date'].values[0].astype('datetime64[D]')
+                            result_output += f",{round(analysis_stock_data[method]['Close'].values[0], 2)}," \
+                                             f"{date}"
+                            price_start.append(round(analysis_stock_data[method]['Close'].values[0], 2))
+                            date_start.append(date)
 
-                    except KeyError as e:
-                        error_message = f"{str(e)} for {ticker} for backtest analysis"
-                        print(error_message)
-                        result_output += ',,'
+                            # Store filter variables data
+                            store_filter_data(filter_data, method, analysis_stock_data, setup)
 
-                    # Add Backtest Data
-                    try:
-                        date = backtest_stock_data['results'][result_date][method]['Date'].values[0].astype(
-                            'datetime64[D]')
-                        result_output += f",{round(backtest_stock_data['results'][result_date][method]['Close'].values[0], 2)}," \
-                                         f"{date}"
-                        price_end.append(round(backtest_stock_data
-                                               ['results'][result_date][method]['Close'].values[0], 2))
-                        date_end.append(date)
-                    except KeyError as e:
-                        error_message = f"{str(e)} for {ticker} for backtest analysis"
-                        print(error_message)
-                        result_output += ',,'
+                        except KeyError as e:
+                            error_message = f"{str(e)} for {ticker} for backtest analysis"
+                            logging.error(error_message)
+                            result_output += ',,'
 
-        # Add final slopes
-        result_output = get_filter_data(filter_data, result_output)
+                        # Add Backtest Data
+                        try:
+                            date = backtest_stock_data['results'][result_date][method]['Date'].values[0].astype(
+                                'datetime64[D]')
+                            result_output += f",{round(backtest_stock_data['results'][result_date][method]['Close'].values[0], 2)}," \
+                                             f"{date}"
+                            price_end.append(round(backtest_stock_data
+                                                   ['results'][result_date][method]['Close'].values[0], 2))
+                            date_end.append(date)
+                        except KeyError as e:
+                            error_message = f"{str(e)} for {ticker} for backtest analysis"
+                            logging.error(error_message)
+                            result_output += ',,'
 
-        gain = round(100 * (max(price_end) - max(price_start)) / max(price_start), 2)
+            # Add final slopes
+            result_output = get_filter_data(filter_data, result_output)
 
-        if recommendation == "Sell":
-            gain *= -1
+            gain = round(100 * (max(price_end) - max(price_start)) / max(price_start), 2)
 
-        period = str((max(date_end) - max(date_start))).replace("days", "")
-        result_output += f",{gain},{period}"
+            if recommendation == "Sell":
+                gain *= -1
 
-        effective_gain = gain
-        effective_period = period
+            period = str((max(date_end) - max(date_start))).replace("days", "")
+            result_output += f",{gain},{period}"
 
-        if setup['Risk']['Stop']['enabled'] and 'stop' in backtest_stock_data:
+            effective_gain = gain
+            effective_period = period
 
-            stop_date = backtest_stock_data['stop']['date']
+            if setup['Risk']['Stop']['enabled'] and 'stop' in backtest_stock_data:
 
-            if stop_date <= min(date_end):
-                effective_gain = setup['Risk']['Stop']['margin'] * 100 * (-1.0)
-                effective_period = np.datetime64(backtest_stock_data['stop']['date']) - max(date_start)
-                effective_period = str(effective_period).replace("days", "")
+                stop_date = backtest_stock_data['stop']['date']
 
-            result_output += f",{stop_date},{effective_gain},{effective_period}"
+                if stop_date <= min(date_end):
+                    effective_gain = setup['Risk']['Stop']['margin'] * 100 * (-1.0)
+                    effective_period = np.datetime64(backtest_stock_data['stop']['date']) - max(date_start)
+                    effective_period = str(effective_period).replace("days", "")
+
+                result_output += f",{stop_date},{effective_gain},{effective_period}"
+
+        except ValueError as error:
+            logging.error(f"Backtest Result error {error}")
 
     return result_output
 
@@ -341,37 +353,43 @@ def backtest_to_file(analysis_data, backtest_data, setup, report_hash):
             f.write(header)
 
             for ticker in backtest_data.keys():
+                try:
+                    result_output = get_backtest_result(ticker=ticker,
+                                                        backtest_stock_data=backtest_data[ticker],
+                                                        analysis_stock_data=analysis_data[ticker],
+                                                        setup=setup)
+                    if result_output != "":
+                        f.write(result_output + '\n')
 
-                result_output = get_backtest_result(ticker=ticker,
-                                                    backtest_stock_data=backtest_data[ticker],
-                                                    analysis_stock_data=analysis_data[ticker],
-                                                    setup=setup)
-
-                f.write(result_output + '\n')
+                except ValueError as error:
+                    logging.error(f"Failed to write backtest result for {ticker} to file - {str(error)}")
         f.close()
-        print(f"Report saved in reports/{report_hash}-bt.csv")
+
+        logging.info(f"Report saved in reports/{report_hash}-bt.csv")
 
     except ValueError as error:
         logging.error(str(error))
 
 
-def get_position_results(setup):
+def get_position_results(position):
+
     results = {}
-    for ticker in setup['Position'].keys():
+
+    for ticker in position['Position'].keys():
 
         try:
 
             results.update({ticker: {}})
 
-            for date in setup['Position'][ticker].keys():
+            for date in position['Position'][ticker].keys():
                 # Get the latest price for stock
                 # "Ticker,Price Start,Price End,Date Start,Gain,Period\n"
                 start_date = datetime.strptime(date, "%Y-%m-%d")
                 end_date = datetime.today()
                 stock_data = fetch_yahoo_stock_data(ticker, start_date=start_date, end_date=end_date)
 
-                price_start = setup['Position'][ticker][date]['price']
-                volume = setup['Position'][ticker][date]['volume']
+                price_start = position['Position'][ticker][date]['price']
+                volume = position['Position'][ticker][date]['volume']
 
                 price_end = round(stock_data['Close'].tail(1).values[0], 2)
                 gain = round(100 * (price_end - price_start) / price_start, 2)
@@ -381,7 +399,7 @@ def get_position_results(setup):
                                                "volume": volume, "period": position_period}})
         except Exception as e:
             error_message = f"Failed to get position results for {ticker}"
-            print(error_message)
+            logging(error_message)
 
     return results
 
@@ -422,20 +440,31 @@ def analysis_filter(data, setup):
 
     try:
         # Check if data crossed trend limits
+        recommendation = data['Cross'].values[0]
+
         for ft in setup['Filters'].keys():
             for filter in setup['Filters'][ft].keys():
                 if setup['Filters'][ft][filter]['enabled']:
                     if ft == 'Trend':
                         limit = setup['Filters'][ft][filter]['slope']
-                        recommendation = data['Cross'].values[0]
                         slope = data[f"MA_Slope_{filter}"].values[0]
-
                         if recommendation == "Buy" and slope < limit:
                             return True
                         elif recommendation == "Sell" and slope > limit:
                             return True
-
+                    if ft == "Momentum":
+                        if filter == "adx":
+                            adx_range = setup['Filters'][ft][filter]['adx']
+                            dip_range = setup['Filters'][ft][filter]['di+']
+                            dim_range = setup['Filters'][ft][filter]['di-']
+                            adx_value = data['ADX']
+                            dip_value = data['+DI']
+                            dim_value = data['-DI']
+                            if recommendation == "Buy":
+                                if adx_value > adx_range[1] or adx_value < adx_range[0]:
+                                    return True
+                                if dip_value > dip_range[1] or dim_value < dim_range[0]:
+                                    return True
         return False
     except ValueError as e:
-        error_message = f"Failed to validate if data meets thresholds limitations - {str(e)}"
-        logging.error(error_message)
+        logging.error(f"Failed to validate if data meets thresholds limitations - {str(e)}")

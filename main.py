@@ -3,15 +3,13 @@ import pandas as pd
 from utils.analysis import *
 from utils.mail import mail_analysis
 from utils.utils import get_hash, create_directories_if_not_exist, position_results_to_file, \
-    analysis_to_file, get_stock_selection_dates, valid_end_date, LoadFromFile, valid_start_date, valid_date
+    analysis_to_file, get_stock_selection_dates, valid_end_date, LoadFromFile, valid_start_date, valid_date, \
+    enable_logging
 
 pd.options.mode.chained_assignment = None
 
 
 def main():
-
-    logging.basicConfig(filename='logs/error.log', level=logging.ERROR,
-                        format='%(asctime)s:%(levelname)s:%(funcName)s:%(message)s')
 
     parser = argparse.ArgumentParser(description="Analyze stock crossings of moving averages.")
     parser.add_argument('-i', '--input', required=True, action=LoadFromFile,
@@ -20,7 +18,9 @@ def main():
     parser.add_argument('-es','--subject',default="Report Analysis", help="Email subject to send results.")
     parser.add_argument('-c', '--config', required=True, action=LoadFromFile, help="Configuration File.")
     parser.add_argument('-s', '--setup', required=True, action=LoadFromFile, help="Setup definition File.")
+    parser.add_argument('-p', '--position', action=LoadFromFile, help="Setup position File.")
     parser.add_argument('-l', '--limit', type=int, default=500, help="Limit the number of stocks processed.")
+    parser.add_argument('-v', '--verbose', default=False, action="store_true", help="Verbose mode.")
     parser.add_argument('-b', '--backtest', action="store_true",
                         help="Backtest mode provides recommended stocks prior to start date and assess the "
                              "recommendation over specified the specified period. If no dates are specified, "
@@ -32,9 +32,12 @@ def main():
     args = parser.parse_args()
 
     config = args.config
+    position = args.position
     setup = args.setup
     ticker_list = args.input
     limit = args.limit
+
+    enable_logging(args.verbose)
 
     # Create required dirs if not exist
     create_directories_if_not_exist("reports")
@@ -45,7 +48,7 @@ def main():
     report_hash = get_hash(f"{args.email}" + str(setup) + current_datetime + str(args.input)
                            + str(args.backtest))
 
-    print(f"--------------------------------------------------------\n"
+    logging.info(f"--------------------------------------------------------\n"
           f"Starting Report {report_hash}\n"
           f"--------------------------------------------------------\n")
 
@@ -54,7 +57,7 @@ def main():
                                                      backtest=args.backtest)
 
     # Get recommended stocks according to setup file
-    analysis_data = select_stocks_from_setup(ticker_list, setup, limit, report_hash,
+    analysis_data = select_stocks_from_setup(ticker_list, setup, limit,
                                              start_date=analysis_start_date, end_date=analysis_end_date)
 
     if args.backtest:
@@ -74,12 +77,11 @@ def main():
 
         except ValueError as ve:
             logging.error(str(ve))
-            print(f"Backtest failed - {str(ve)}")
 
-        print("Backtest Completed")
+        logging.info("Backtest Completed")
 
     else:
-        position_results = get_position_results(setup)
+        position_results = get_position_results(position)
         position_results_to_file(position_results, setup, report_hash)
 
     # Save Analysis to Report File
@@ -88,10 +90,10 @@ def main():
     # Send Email if required and not backtest
     if args.email and not args.backtest:
 
-        mail_analysis(report_hash, setup, config, args.email, subject=args.subject)
+        mail_analysis(report_hash, setup, config, args.email, subject=args.subject, position=position)
 
     else:
-        print("No results to send via email.")
+        logging.info("No results to send via email.")
 
 
 if __name__ == "__main__":
