@@ -3,7 +3,7 @@ import argparse
 import logging
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
-from collections import defaultdict
+from utils.logging_config import logger
 import os
 import json
 
@@ -23,39 +23,6 @@ def get_hash(data):
     hex_digest = md5_hash.hexdigest()
 
     return hex_digest
-
-
-def enable_logging(verbose):
-    # Create a custom logger
-    logger = logging.getLogger(__name__)
-    logger.setLevel(logging.WARNING)  # Set the logging level to DEBUG
-
-    # Create handlers
-    # File handler for writing logs to a file
-    file_handler = logging.FileHandler('app.log')
-    file_handler.setLevel(logging.WARNING)
-
-    # Stream handler for writing logs to stdout
-    stream_handler = logging.StreamHandler()
-    stream_handler.setLevel(logging.WARNING)
-
-    # Create formatters and add it to handlers
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-    file_handler.setFormatter(formatter)
-    stream_handler.setFormatter(formatter)
-
-    # Add handlers to the logger
-    logger.addHandler(file_handler)
-
-    if verbose:
-        logger.addHandler(stream_handler)
-
-
-# Function to log errors
-def log_error(message, logfile):
-    """Log errors to the error log file."""
-    with open(logfile, 'a') as log_file:
-        log_file.write(message + '\n')
 
 
 def read_tickers_from_file(file_path):
@@ -136,7 +103,7 @@ def get_days_from_period(period):
 
 def analysis_to_file(analysis_data, setup, report_hash):
 
-    logging.info(f"Saving analysis to file {report_hash}.csv")
+    logger.info(f"Saving analysis to file {report_hash}.csv")
 
     try:
 
@@ -173,8 +140,7 @@ def analysis_to_file(analysis_data, setup, report_hash):
                                     recommendation = analysis_data[ticker][method]['Cross'].values[0]
                                     analysis_output += f",{recommendation}"
                                 except KeyError as ke:
-                                    error_message = f"No {str(ke)} analysis found for {ticker}"
-                                    log_error(error_message, f"logs/{report_hash}.log")
+                                    logger.debug(f"No {str(ke)} analysis found for {ticker}")
                                     analysis_output += ","
 
                     f.write(analysis_output + '\n')
@@ -182,7 +148,7 @@ def analysis_to_file(analysis_data, setup, report_hash):
             f.close()
 
     except ValueError as e:
-        logging.error("Failed to write analysis to file")
+        logger.error(f"Failed to write analysis to file str({e})")
 
 
 def position_results_to_file(position_results, setup, hash):
@@ -236,9 +202,9 @@ def get_stock_selection_dates(start_date: datetime, setup, backtest=False):
     analysis_days = get_days_from_period(setup['Period']) + get_pre_analysis_period(setup)
 
     if backtest:
-        end_date = start_date - relativedelta(hours=1) # Data up to day prior of backtest start_date
+        end_date = start_date - relativedelta(hours=1)  # Data up to day prior of backtest start_date
     else:
-        end_date = datetime.today()
+        end_date = datetime.combine(datetime.now().date(), datetime.min.time())+relativedelta(hours=23)
 
     start_date = end_date - relativedelta(days=analysis_days)
 
@@ -267,7 +233,7 @@ def store_filter_data(filter_data, method, analysis_ticker_data, setup):
                         filter_data[ft][filter].append([adx, dip, dim])
 
     except ValueError as error:
-        logging.error(f"{str(error)}")
+        logger.error(f"{str(error)}")
 
 
 def get_filter_data(filter_data, result_output):
@@ -302,6 +268,6 @@ def get_filter_data(filter_data, result_output):
                     filter_data[ft][filter] = []  # Clear previous data
         return result_output
     except ValueError as error:
-        logging.error(f"{str(error)}")
+        logger.error(f"{str(error)}")
 
 

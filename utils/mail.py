@@ -53,11 +53,8 @@ def send_html_email(receiver_email, subject, html_content,
         logging.error(f"Error sending email: {e}")
 
 
-def csv_to_html(input_file, position=None):
+def csv_to_html(input_file, position):
     """Read CSV file and return it as a html data for mail"""
-
-    if position is None:
-        position = []
 
     with open(input_file, 'r') as csv_file:
         csv_reader = csv.reader(csv_file)
@@ -89,23 +86,31 @@ def csv_to_html(input_file, position=None):
     return html_output
 
 
-def mail_analysis(report_hash, setup, config, rctp, subject, position):
+def mail_analysis(report_hash, config, rctp_to, subject, position):
 
-    date = datetime.now().strftime("%Y-%m-%d")
+    if position:
+        position_list = list(position['Position'].keys())
+        position_data = csv_to_html(f"reports/{report_hash}-position.csv", position=position_list)
+    else:
+        position_list = []
 
-    report_data = csv_to_html(f"reports/{report_hash}.csv", position=list(position['Position'].keys()))
-    position_data = csv_to_html(f"reports/{report_hash}-position.csv", position=[])
+    report_data = csv_to_html(f"reports/{report_hash}.csv", position=position_list)
 
-    body = f"""<html> \
+    head = f"""<html> \
                    <head>
-                    </head> 
-                   <body><h2 style="font-family: 'Courier New', Courier, monospace;">Daily Stock Report</h2> 
-                   <h3 style="font-family: 'Courier New', Courier, monospace;">Analysis</h3>
-                    {report_data}
-                    <h3 style="font-family: 'Courier New', Courier, monospace;">Position Results</h3>
-                    {position_data}
-                    <p style="font-family: 'Courier New', Courier, monospace;">** Lower or equal to stop margin</p>
-                    </body></html>"""
+                    </head> """
+    body = f"""<body><h2 style="font-family: 'Courier New', Courier, monospace;">Daily Stock Report</h2> 
+               <h3 style="font-family: 'Courier New', Courier, monospace;">Analysis</h3>
+                {report_data}
+                """
 
-    send_html_email(receiver_email=rctp, subject=f"{subject} {date}",
-                    config=config, html_content=body)
+    if position:
+        body += f"""<h3 style="font-family: 'Courier New', Courier, monospace;">Position Results</h3>\
+                {position_data}
+                <p style="font-family: 'Courier New', Courier, monospace;">** Lower or equal to stop margin</p>"""
+
+    footer = "</body></html>"
+
+    content = head + body + footer
+
+    send_html_email(receiver_email=rctp_to, subject=f"{subject}", config=config, html_content=content)

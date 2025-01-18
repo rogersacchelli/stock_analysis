@@ -1,5 +1,10 @@
 [
     {
+        "Code": "AES",
+        "Company": "AES Corp",
+        "Sector": "Utilities"
+    },
+    {
         "Code": "MO",
         "Company": "Altria Group Inc",
         "Sector": "Consumer Staples"
@@ -58,11 +63,6 @@
         "Code": "AMD",
         "Company": "Advanced Micro Devices Inc",
         "Sector": "Information Technology"
-    },
-    {
-        "Code": "AES",
-        "Company": "AES Corp",
-        "Sector": "Utilities"
     },
     {
         "Code": "AET",

@@ -1,8 +1,8 @@
 {
   "Email": {
-    "from_email": "example@example.com",
-    "from_password": "password",
-    "smtp_server": "smtp.example.com",
+    "from_email": "roger.sacchelli@gmail.com",
+    "from_password": "ucnf mkhi erft efyg",
+    "smtp_server": "smtp.gmail.com",
     "smtp_port": 587
   }
 }

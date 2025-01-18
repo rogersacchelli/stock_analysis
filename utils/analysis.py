@@ -1,5 +1,6 @@
 from momentum import rsi, add_adx
 import logging
+from utils.logging_config import logger
 from risk import get_stop_data
 from utils.utils import get_pre_analysis_period, store_filter_data, get_filter_data
 from data_aquisition import fetch_yahoo_stock_data
@@ -14,14 +15,14 @@ def select_stocks_from_setup(stock_list, setup, limit, start_date=None, end_date
 
     for ticker_code in stock_list:
         ticker = ticker_code['Code']
-        logging.info(f"Analyzing {ticker}...")
+        logger.debug(f"Analyzing {ticker}...")
 
         try:
             stock_data = fetch_yahoo_stock_data(ticker, start_date=start_date, end_date=end_date)
         except Exception as e:
             # Skip to next Ticket
             error_message = f"Error fetching data for {ticker} - {str(e)}"
-            logging.error(str(error_message))
+            logger.error(str(error_message))
             continue
 
         # Add slope information to stock data
@@ -60,10 +61,9 @@ def select_stocks_from_setup(stock_list, setup, limit, start_date=None, end_date
                             if method == 'rsi':
                                 crossings = rsi(stock_data, setup, end_date=end_date)
 
-                        is_filtered = analysis_filter(crossings, setup)
                         if not crossings.empty:
-                            if not is_filtered:
-                                logging.debug(f"Crossings found for {ticker} using {analysis}.")
+                            if not analysis_filter(crossings, setup):
+                                logger.debug(f"Crossings found for {ticker} using {analysis}.")
 
                                 crossings.index = [ticker] * len(crossings)
                                 try:
@@ -73,17 +73,17 @@ def select_stocks_from_setup(stock_list, setup, limit, start_date=None, end_date
 
                                 analysis_data[ticker].update({method: crossings})
                             else:
-                                logging.debug(f"{analysis} filtered out for {ticker}.")
+                                logger.debug(f"{analysis} filtered out for {ticker}.")
                         else:
-                            logging.debug(f"No crossings found for {ticker} using {analysis}.")
+                            logger.debug(f"No crossings found for {ticker} using {analysis}.")
 
                     except Exception as e:
                         error_message = f"Error analyzing {ticker}: {e}"
-                        logging.error(error_message)
+                        logger.error(error_message)
 
         # Keep Analysis if higher then thresholds
         if ticker in analysis_data:
-            logging.debug(f"Checking score for {ticker}")
+            logger.debug(f"Checking score for {ticker}")
             calculate_score(analysis_data[ticker], setup)
 
             if setup['Risk']['Stop']['enabled']:
@@ -105,7 +105,7 @@ def backtest(analysis_data, start_date, end_date, setup):
 
     for ticker in analysis_data.keys():
         try:
-            logging.info(f"Backtesting {ticker}")
+            logger.info(f"Backtesting {ticker}")
 
             bt_start_date = start_date - relativedelta(days=get_pre_analysis_period(setup))
 
@@ -224,7 +224,7 @@ def backtest(analysis_data, start_date, end_date, setup):
 
         except ValueError as e:
             error_message = f"Error handling backtest data - {str(e)}"
-            logging.error(error_message)
+            logger.error(error_message)
 
     return backtest_data
 
@@ -293,7 +293,7 @@ def get_backtest_result(ticker, backtest_stock_data, analysis_stock_data, setup)
 
                         except KeyError as e:
                             error_message = f"{str(e)} for {ticker} for backtest analysis"
-                            logging.error(error_message)
+                            logger.error(error_message)
                             result_output += ',,'
 
                         # Add Backtest Data
@@ -307,7 +307,7 @@ def get_backtest_result(ticker, backtest_stock_data, analysis_stock_data, setup)
                             date_end.append(date)
                         except KeyError as e:
                             error_message = f"{str(e)} for {ticker} for backtest analysis"
-                            logging.error(error_message)
+                            logger.error(error_message)
                             result_output += ',,'
 
             # Add final slopes
@@ -336,14 +336,14 @@ def get_backtest_result(ticker, backtest_stock_data, analysis_stock_data, setup)
                 result_output += f",{stop_date},{effective_gain},{effective_period}"
 
         except ValueError as error:
-            logging.error(f"Backtest Result error {error}")
+            logger.error(f"Backtest Result error {error}")
 
     return result_output
 
 
 def backtest_to_file(analysis_data, backtest_data, setup, report_hash):
 
-    logging.info(f"Saving backtest to file {report_hash}-bt.csv")
+    logger.info(f"Saving backtest to file {report_hash}-bt.csv")
     filter_data = {}
 
     try:
@@ -362,13 +362,13 @@ def backtest_to_file(analysis_data, backtest_data, setup, report_hash):
                         f.write(result_output + '\n')
 
                 except ValueError as error:
-                    logging.error(f"Failed to write backtest result for {ticker} to file - {str(error)}")
+                    logger.error(f"Failed to write backtest result for {ticker} to file - {str(error)}")
         f.close()
 
-        logging.info(f"Report saved in reports/{report_hash}-bt.csv")
+        logger.info(f"Report saved in reports/{report_hash}-bt.csv")
 
     except ValueError as error:
-        logging.error(str(error))
+        logger.error(str(error))
 
 
 def get_position_results(position):
@@ -467,4 +467,4 @@ def analysis_filter(data, setup):
                                     return True
         return False
     except ValueError as e:
-        logging.error(f"Failed to validate if data meets thresholds limitations - {str(e)}")
+        logger.error(f"Failed to validate if data meets thresholds limitations - {str(e)}")
