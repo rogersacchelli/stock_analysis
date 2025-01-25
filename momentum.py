@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+from constants import *
 
 
 def rsi(stock_data, setup, end_date, backtest=False):
@@ -30,7 +31,7 @@ def rsi(stock_data, setup, end_date, backtest=False):
     rsi_add_cross_signal(stock_data, setup)
 
     # Detect touches
-    crossings = stock_data[stock_data['Cross'].notna()]
+    crossings = stock_data[stock_data[f"rsi_Cross"] != HOLD]
     crossings = crossings.reset_index()  # Reset index to access the Date column
 
     if not backtest:
@@ -42,9 +43,6 @@ def rsi(stock_data, setup, end_date, backtest=False):
         return last_crossing
     else:
         return crossings
-
-    return rsi
-
 
 
 def rsi_add_cross_signal(stock_data, setup):
@@ -63,9 +61,9 @@ def rsi_add_cross_signal(stock_data, setup):
         stock_data['RSI'] < setup['Analysis']['Momentum']['rsi']['lower'],
         stock_data['RSI'] > setup['Analysis']['Momentum']['rsi']['upper']
     ]
-    choices = ['Buy', 'Sell']
+    choices = [BUY, SELL]
 
-    stock_data['Cross'] = np.select(conditions, choices, default=None)
+    stock_data['rsi_Cross'] = np.select(conditions, choices, default=HOLD)
 
 
 def add_adx(df, setup):

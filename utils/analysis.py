@@ -8,10 +8,13 @@ from dateutil.relativedelta import relativedelta
 from collections import defaultdict
 from trend import *
 from datetime import datetime
+from constants import Trade
 
 
 def select_stocks_from_setup(stock_list, setup, limit, start_date=None, end_date=None):
     analysis_data = {}
+
+    add_stock_data = setup['Features']['enabled']
 
     for ticker_code in stock_list:
         ticker = ticker_code['Code']
@@ -62,7 +65,7 @@ def select_stocks_from_setup(stock_list, setup, limit, start_date=None, end_date
                                 crossings = rsi(stock_data, setup, end_date=end_date)
 
                         if not crossings.empty:
-                            if not analysis_filter(crossings, setup):
+                            if not analysis_filter(crossings, setup, method):
                                 logger.debug(f"Crossings found for {ticker} using {method}.")
 
                                 crossings.index = [ticker] * len(crossings)
@@ -81,11 +84,20 @@ def select_stocks_from_setup(stock_list, setup, limit, start_date=None, end_date
                         error_message = f"Error analyzing {ticker}: {e}"
                         logger.error(error_message)
 
-        # Keep Analysis if higher then thresholds
+        # Add stock data
+        if not stock_data.empty:
+            try:
+                analysis_data[ticker]
+            except KeyError:
+                analysis_data.update({ticker: {}})
+            analysis_data[ticker].update({'stock_data': stock_data})
+
+        # Calculate score
         if ticker in analysis_data:
             logger.debug(f"Checking score for {ticker}")
             calculate_score(analysis_data[ticker], setup)
 
+            # Add date which stock would be stopped if reached min/max prices
             if setup['Risk']['Stop']['enabled']:
                 analysis_data[ticker].update({"stop": {"date_start": stock_data['Close'].tail(1).index,
                                                        "price_start": stock_data['Close'].tail(1).values[0]}})
@@ -165,8 +177,8 @@ def backtest(analysis_data, start_date, end_date, setup):
             seek for opposite recommendations of the analysis in order to correctly calculate gains.  
             """
 
-            analysis_recommendation = 'Sell' if analysis_data[ticker]['score'] < 0.0 else 'Buy'
-            backtest_recommendation = 'Sell' if analysis_recommendation == 'Buy' else 'Buy'
+            analysis_recommendation = Trade.SELL if analysis_data[ticker]['score'] < 0.0 else Trade.BUY
+            backtest_recommendation = Trade.SELL if analysis_recommendation == 'Buy' else Trade.BUY
 
             # TODO: Pack Analysis of the next recommendation into a single function
             # search through selected stocks common days of recommendation to them for backtesting dataset
@@ -187,7 +199,7 @@ def backtest(analysis_data, start_date, end_date, setup):
                                                                     (analysis_crossings['Date'] >= analysis_day) &
                                                                     (analysis_crossings['Date'] <= analysis_limit)]
                         if not analysis_crossings.empty:
-                            if backtest_recommendation == 'Buy':
+                            if backtest_recommendation == Trade.BUY:
                                 backtest_score += setup['Analysis'][analysis][method]['weight']
                             else:
                                 backtest_score -= setup['Analysis'][analysis][method]['weight']
@@ -272,7 +284,7 @@ def get_backtest_result(ticker, backtest_stock_data, analysis_stock_data, setup)
 
     for result_date in backtest_stock_data['results'].keys():
         # Add result to file
-        recommendation = 'Buy' if analysis_stock_data['score'] > 0.0 else 'Sell'
+        recommendation = Trade.BUY if analysis_stock_data['score'] > 0.0 else Trade.SELL
         result_output = f"{ticker},{recommendation}"
 
         try:
@@ -417,7 +429,7 @@ def calculate_score(data, setup):
                     # Assign weights to results
                     total_score += setup['Analysis'][analysis][method]['weight']
 
-                    if data[method]['Cross'].values[0] == "Sell":
+                    if data[method][f"{method}_Cross"].values[0] == SELL:
                         score -= setup['Analysis'][analysis][method]['weight']
                     else:
                         score += setup['Analysis'][analysis][method]['weight']
@@ -436,11 +448,11 @@ def add_moving_average_slope(stock_data, setup):
         calculate_ma_slope(stock_data, ma_period=period, slope_period=slope, name=ma)
 
 
-def analysis_filter(data, setup):
+def analysis_filter(data, setup, method):
 
     try:
         # Check if data crossed trend limits
-        recommendation = data['Cross'].values[0]
+        recommendation = data[f"{method}_Cross"].values[0]
 
         for ft in setup['Filters'].keys():
             for filter in setup['Filters'][ft].keys():

@@ -3,7 +3,7 @@ import smtplib
 import csv
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from datetime import datetime
+from constants import *
 
 
 def send_html_email(receiver_email, subject, html_content,
@@ -66,6 +66,10 @@ def csv_to_html(input_file, position):
         for row in csv_reader:
             html_output += "  <tr>\n"
             for item in row:
+                if item == "1":
+                    item = "Buy"
+                elif item == "-1":
+                    item == "Sell"
                 if any(member in row for member in position):
                     html_output += f"    <td style=\"font-family: 'Courier New', Courier, monospace; " \
                                    f"\"text-align: center; color: red;\"text-align: center; " \

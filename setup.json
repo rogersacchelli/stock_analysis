@@ -8,7 +8,7 @@
         "enabled": 1,
         "period": 40,
         "rate": 0.01,
-        "output_window": 5,
+        "output_window": 3,
         "avg_type": "sma",
         "weight": 1.0,
         "name": "Long Term Crossing"
@@ -17,7 +17,7 @@
         "enabled": 1,
         "long": 20,
         "short": 5,
-        "output_window": 5,
+        "output_window": 3,
         "weight": 1.0,
         "name": "SMA Cross"
       },
@@ -25,7 +25,7 @@
         "enabled": 0,
         "long": 20,
         "short": 5,
-        "output_window": 5,
+        "output_window": 3,
         "weight": 1.0,
         "name": "EMA Cross"
       },
@@ -41,7 +41,7 @@
       "week_rule": {
         "enabled": 0,
         "period": 4,
-        "output_window": 5,
+        "output_window": 3,
         "weight": 1.0,
         "name": "Week Rule"
       },
@@ -51,7 +51,7 @@
         "short": 5,
         "long": 20,
         "signal_window": 9,
-        "output_window": 5,
+        "output_window": 3,
         "weight": 2.0,
         "name": "MACD"
       }
@@ -121,5 +121,9 @@
       "warning": 0.01,
       "margin": 0.03
     }
+  },
+  "Features": {
+    "enabled": 0,
+    "period": 30
   }
 }

@@ -1,11 +1,13 @@
 import hashlib
 import argparse
 import logging
+import sys
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 from utils.logging_config import logger
 import os
 import json
+
 
 class LoadFromFile(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
@@ -34,11 +36,6 @@ def read_tickers_from_file(file_path):
     return tickers
 
 
-def valid_date(s: str) -> datetime:
-    try:
-        return datetime.strptime(s, "%Y-%m-%d")
-    except ValueError:
-        raise argparse.ArgumentTypeError(f"not a valid date: {s!r}")
 
 
 def valid_start_date(s: str) -> datetime:
@@ -137,7 +134,7 @@ def analysis_to_file(analysis_data, setup, report_hash):
                         for method in setup['Analysis'][analysis].keys():
                             if setup['Analysis'][analysis][method]['enabled']:
                                 try:
-                                    recommendation = analysis_data[ticker][method]['Cross'].values[0]
+                                    recommendation = analysis_data[ticker][method][f"{method}_Cross"].values[0]
                                     analysis_output += f",{recommendation}"
                                 except KeyError as ke:
                                     logger.debug(f"No {str(ke)} analysis found for {ticker}")
@@ -197,14 +194,31 @@ def get_pre_analysis_period(setup, calendar_days=True):
         return period
 
 
-def get_stock_selection_dates(start_date: datetime, setup, backtest=False):
+def get_stock_selection_dates(start_date: datetime, end_date: datetime, setup, backtest=False,
+                              feat_ext=False):
 
+    # Analysis days represents number to be analyzed as per setup + periods defined in setup to calculate averages
     analysis_days = get_days_from_period(setup['Period']) + get_pre_analysis_period(setup)
+
+    extract_feat_win = setup['Features']['period']
 
     if backtest:
         end_date = start_date - relativedelta(hours=1)  # Data up to day prior of backtest start_date
-    else:
-        end_date = datetime.combine(datetime.now().date(), datetime.min.time())+relativedelta(hours=23)
+    elif feat_ext:
+        # Feature Extraction Enabled
+        features_collection_period = (end_date - start_date).days
+        if not features_collection_period:
+            sys.exit(f"Feature extraction period needs to be at least 1 working days")
+
+        end_date_window = (datetime.today() - end_date).days
+
+        # Validate if there is enough window to get closing prices defined in Extract Features Window
+        if end_date_window < extract_feat_win:
+            sys.exit(f"Feature extraction end date needs to be at least {extract_feat_win} working days old")
+
+        start_date = start_date - relativedelta(days=analysis_days)
+
+        return start_date, end_date
 
     start_date = end_date - relativedelta(days=analysis_days)
 
