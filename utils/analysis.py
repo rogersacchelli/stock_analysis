@@ -1,3 +1,4 @@
+from features_extraction import add_closing_price
 from momentum import rsi, add_adx
 import logging
 from utils.logging_config import logger
@@ -91,6 +92,8 @@ def select_stocks_from_setup(stock_list, setup, limit, start_date=None, end_date
             except KeyError:
                 analysis_data.update({ticker: {}})
             analysis_data[ticker].update({'stock_data': stock_data})
+            # Add ahead closing price data
+            add_closing_price(analysis_data[ticker]['stock_data'], setup)
 
         # Calculate score
         if ticker in analysis_data:

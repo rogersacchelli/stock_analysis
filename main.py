@@ -1,4 +1,6 @@
 import pandas as pd
+
+from features_extraction import save_features_to_file
 from utils.analysis import *
 from utils.argument_parsing import argument_parsing
 from utils.mail import mail_analysis
@@ -57,22 +59,25 @@ def main():
             logger.error(str(ve))
 
         logger.info("Backtest Completed")
-
+    elif features:
+        # Add features to file
+        save_features_to_file(analysis_data, report_hash, setup, start_date=args.start_date, end_date=args.end_date)
+        pass
     else:
         if position:
             position_results = get_position_results(position)
             position_results_to_file(position_results, setup, report_hash)
 
-    # Save Analysis to Report File
-    analysis_to_file(analysis_data, setup, report_hash)
+        # Save Analysis to Report File
+        analysis_to_file(analysis_data, setup, report_hash)
 
-    # Send Email if required and not backtest
-    if args.email and not args.backtest:
+        # Send Email if required and not backtest
+        if args.email and not args.backtest:
 
-        mail_analysis(report_hash, config, args.email, subject=args.subject, position=position)
+            mail_analysis(report_hash, config, args.email, subject=args.subject, position=position)
 
-    else:
-        logger.info("No results to send via email.")
+        else:
+            logger.info("No results to send via email.")
 
 
 if __name__ == "__main__":
