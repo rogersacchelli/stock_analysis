@@ -8,7 +8,7 @@ def argument_parsing():
 
     parser = argparse.ArgumentParser(description="Analyze stock crossings of moving averages.")
 
-    group = parser.add_mutually_exclusive_group(required=True)
+    group = parser.add_mutually_exclusive_group()
 
     parser.add_argument('-i', '--input', required=True, action=LoadFromFile,
                         help="Input file containing stock tickers in JSON format.")
