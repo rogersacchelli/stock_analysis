@@ -61,8 +61,7 @@ def main():
         logger.info("Backtest Completed")
     elif features:
         # Add features to file
-        save_features_to_file(analysis_data, report_hash, setup, start_date=args.start_date, end_date=args.end_date)
-        pass
+        save_features_to_file(analysis_data, report_hash)
     else:
         if position:
             position_results = get_position_results(position)

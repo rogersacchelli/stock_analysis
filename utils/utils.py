@@ -112,8 +112,6 @@ def analysis_to_file(analysis_data, setup, report_hash):
             header = "Ticker,Report Date"
 
             # Create Header based on analysis settings
-            analysis_list = ["Trend", "Momentum"]
-
             for analysis in setup['Analysis'].keys():
                 for method in setup['Analysis'][analysis].keys():
                     if setup['Analysis'][analysis][method]['enabled']:

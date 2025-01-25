@@ -124,6 +124,7 @@
   },
   "Features": {
     "enabled": 0,
-    "period": 30
+    "period": 30,
+    "feat_list": ["High", "Low", "Close","Open"]
   }
 }

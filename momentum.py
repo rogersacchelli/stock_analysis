@@ -68,14 +68,14 @@ def rsi_add_cross_signal(stock_data, setup):
 
 def add_adx(df, setup):
     """
-    Calculate ADX, +DI, and -DI for the given DataFrame.
+    Calculate ADX, +DI, and DI- for the given DataFrame.
 
     Args:
         df (pd.DataFrame): DataFrame with 'High', 'Low', and 'Close' columns.
         period (int): Period for ADX calculation (default is 14).
 
     Returns:
-        pd.DataFrame: DataFrame with ADX, +DI, and -DI columns added.
+        pd.DataFrame: DataFrame with ADX, +DI, and DI- columns added.
     """
 
     period = setup['Filters']['Momentum']['adx']['period']
@@ -97,12 +97,12 @@ def add_adx(df, setup):
     df['+DM_SMA'] = df['+DM'].rolling(window=period).sum()
     df['-DM_SMA'] = df['-DM'].rolling(window=period).sum()
 
-    # Calculate +DI and -DI
-    df['+DI'] = (df['+DM_SMA'] / df['TR_SMA']) * 100
-    df['-DI'] = (df['-DM_SMA'] / df['TR_SMA']) * 100
+    # Calculate +DI and DI-
+    df['DI+'] = (df['+DM_SMA'] / df['TR_SMA']) * 100
+    df['DI-'] = (df['-DM_SMA'] / df['TR_SMA']) * 100
 
     # Calculate DX
-    df['DX'] = (abs(df['+DI'] - df['-DI']) / abs(df['+DI'] + df['-DI'])) * 100
+    df['DX'] = (abs(df['DI+'] - df['DI-']) / abs(df['DI+'] + df['DI-'])) * 100
 
     # Calculate ADX
     df['ADX'] = df['DX'].rolling(window=period).mean()

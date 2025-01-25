@@ -15,8 +15,6 @@ from constants import Trade
 def select_stocks_from_setup(stock_list, setup, limit, start_date=None, end_date=None):
     analysis_data = {}
 
-    add_stock_data = setup['Features']['enabled']
-
     for ticker_code in stock_list:
         ticker = ticker_code['Code']
         logger.debug(f"Analyzing {ticker}...")
@@ -93,7 +91,7 @@ def select_stocks_from_setup(stock_list, setup, limit, start_date=None, end_date
                 analysis_data.update({ticker: {}})
             analysis_data[ticker].update({'stock_data': stock_data})
             # Add ahead closing price data
-            add_closing_price(analysis_data[ticker]['stock_data'], setup)
+            analysis_data[ticker]['stock_data'] = add_closing_price(analysis_data[ticker]['stock_data'], setup)
 
         # Calculate score
         if ticker in analysis_data:
@@ -448,7 +446,7 @@ def add_moving_average_slope(stock_data, setup):
         period = setup['Filters']['Trend'][ma]['period']
         slope = setup['Filters']['Trend'][ma]['slope_period']
 
-        calculate_ma_slope(stock_data, ma_period=period, slope_period=slope, name=ma)
+        calculate_ma_slope(stock_data, ma_period=period, slope_period=slope, moving_average_type=ma)
 
 
 def analysis_filter(data, setup, method):
