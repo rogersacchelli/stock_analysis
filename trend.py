@@ -246,3 +246,26 @@ def calculate_ma_slope(stock_data, ma_period, slope_period, moving_average_type)
     # Apply slope calculation to each moving average window
     stock_data[f"MA_Slope_{moving_average_type}"] = stock_data[f"MA_{moving_average_type}"].rolling(
         window=slope_period).apply(slope_calc, raw=False)
+
+
+def calculate_obv(stock_data):
+
+    # Calculate OBV
+    obv = [0]
+
+    for i in range(1, len(stock_data)):
+        close = stock_data['Close'].iloc[i]
+        prev_close = stock_data['Close'].iloc[i - 1]
+        volume = stock_data['Volume'].iloc[i]
+
+        if close > prev_close:
+            obv.append(obv[-1] + volume)
+        elif close < prev_close:
+            obv.append(obv[-1] - volume)
+        else:
+            obv.append(obv[-1])  # If price unchanged, OBV remains the same
+
+    # Add OBV to the dataframe
+    stock_data['OBV'] = obv
+
+    return stock_data

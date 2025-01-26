@@ -31,6 +31,8 @@ def select_stocks_from_setup(stock_list, setup, limit, start_date=None, end_date
         add_moving_average_slope(stock_data, setup)
         # Add ADX
         stock_data = add_adx(stock_data, setup)
+        # Add OBV
+        stock_data = calculate_obv(stock_data)
 
         for analysis in setup['Analysis'].keys():
             for method in setup['Analysis'][analysis].keys():
@@ -260,7 +262,7 @@ def create_backtest_report_heading(setup, filter_data):
                 filter_data[ft].update({filter: []})
             elif ft == "Momentum":
                 if filter == "adx":
-                    filter_data[ft].update({filter: {"ADX": [], "+DI": [], "-DI": []}})
+                    filter_data[ft].update({filter: {"ADX": [], "DI-": [], "DI+": []}})
                     header += f",{filter},{filter}_d+,{filter}_d-"
 
     if setup['Risk']['Stop']['enabled']:
@@ -471,8 +473,8 @@ def analysis_filter(data, setup, method):
                             dip_range = setup['Filters'][ft][filter]['di+']
                             dim_range = setup['Filters'][ft][filter]['di-']
                             adx_value = data['ADX']
-                            dip_value = data['+DI']
-                            dim_value = data['-DI']
+                            dip_value = data['DI+']
+                            dim_value = data['DI-']
                             if recommendation == "Buy":
                                 if adx_value > adx_range[1] or adx_value < adx_range[0]:
                                     return True
