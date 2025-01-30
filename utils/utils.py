@@ -215,6 +215,7 @@ def get_stock_selection_dates(start_date: datetime, end_date: datetime, setup, b
             sys.exit(f"Feature extraction end date needs to be at least {extract_feat_win} working days old")
 
         start_date = start_date - relativedelta(days=analysis_days)
+        end_date = end_date + (relativedelta(days=extract_feat_win/5 * 7 + 10))
 
         return start_date, end_date
 

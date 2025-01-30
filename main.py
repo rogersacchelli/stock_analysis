@@ -25,6 +25,7 @@ def main():
     create_directories_if_not_exist("reports")
     create_directories_if_not_exist("logs")
     create_directories_if_not_exist("ticker_data")
+    create_directories_if_not_exist("models")
 
     current_datetime = datetime.now().strftime('%Y-%m-%dT%H-%M-%S')
     report_hash = get_hash(f"{args.email}" + str(setup) + current_datetime + str(args.input) + str(args.backtest))
@@ -61,7 +62,7 @@ def main():
         logger.info("Backtest Completed")
     elif features:
         # Add features to file
-        save_features_to_file(analysis_data, report_hash)
+        save_features_to_file(analysis_data, report_hash, args.start_date, args.end_date)
     else:
         if position:
             position_results = get_position_results(position)
