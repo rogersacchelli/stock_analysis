@@ -54,6 +54,15 @@
         "output_window": 3,
         "weight": 2.0,
         "name": "MACD"
+      },
+      "stochastic": {
+        "enabled": 1,
+        "period": 14,
+        "smooth_k": 3,
+        "smooth_d": 3,
+        "output_window": 3,
+        "weight": 2.0,
+        "name": "Stochastic Osc"
       }
   },
     "Momentum": {

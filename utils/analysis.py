@@ -33,6 +33,10 @@ def select_stocks_from_setup(stock_list, setup, limit, start_date=None, end_date
         stock_data = add_adx(stock_data, setup)
         # Add OBV
         stock_data = calculate_obv(stock_data)
+        # Add Price Diff
+        stock_data = add_price_diff(stock_data)
+        # Add Stochastic data
+        add_stochastic_oscillator(stock_data, setup)
 
         for analysis in setup['Analysis'].keys():
             for method in setup['Analysis'][analysis].keys():
@@ -483,3 +487,8 @@ def analysis_filter(data, setup, method):
         return False
     except ValueError as e:
         logger.error(f"Failed to validate if data meets thresholds limitations - {str(e)}")
+
+
+def add_price_diff(stock_data, type = 'Close'):
+    stock_data[f"Diff_{type}"] = stock_data[type].diff()
+    return stock_data

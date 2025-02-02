@@ -18,6 +18,7 @@ def save_features_to_file(data, report_hash, start_date:datetime, end_date:datet
     with open(output_file, mode='w') as f:
         for ticker in data.keys():
             df = data[ticker]['stock_data'].dropna()
+            df['Ticker'] = ticker
             df = df.loc[start_date:end_date]
             df.to_csv(f, header=header, index=False)
             header = False

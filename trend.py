@@ -269,3 +269,24 @@ def calculate_obv(stock_data):
     stock_data['OBV'] = obv
 
     return stock_data
+
+
+def add_stochastic_oscillator(stock_data, setup):
+
+    period=setup['Analysis']['Trend']['stochastic']['period']
+    smooth_k=setup['Analysis']['Trend']['stochastic']['smooth_k']
+    smooth_d=setup['Analysis']['Trend']['stochastic']['smooth_d']
+
+    """Calculate the Stochastic Oscillator (%K and %D)."""
+    stock_data['Stoch_Low_Min'] = stock_data['Low'].rolling(window=period).min()
+    stock_data['Stoch_High_Max'] = stock_data['High'].rolling(window=period).max()
+    stock_data['Stoch_%K'] = ((stock_data['Close'] - stock_data['Stoch_Low_Min']) / (stock_data['Stoch_High_Max'] - stock_data['Stoch_Low_Min'])) * 100
+    stock_data['Stoch_%K'] = stock_data['Stoch_%K'].rolling(window=smooth_k).mean()  # Smooth %K
+    stock_data['Stoch_%D'] = stock_data['Stoch_%K'].rolling(window=smooth_d).mean()  # %D = SMA of %K
+
+
+def detect_stochastic_crossings(stock_data):
+    """Detect bullish and bearish crossings between %K and %D."""
+    stock_data['Stoch_Cross'] = (stock_data['Stoch_%K'].shift(1) < stock_data['Stoch_%D'].shift(1)) & (stock_data['Stoch_%K'] > stock_data['Stoch_%D'])  # %K crosses above %D
+    stock_data['Sell_Signal'] = (stock_data['Stoch_%K'].shift(1) > stock_data['Stoch_%D'].shift(1)) & (stock_data['Stoch_%K'] < stock_data['Stoch_%D'])  # %K crosses below %D
+    return stock_data
