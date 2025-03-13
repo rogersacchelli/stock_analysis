@@ -27,6 +27,15 @@ def get_hash(data):
     return hex_digest
 
 
+def get_ticker_list(ticker_dict):
+    # List of Dicts for each ticker
+    tickers = []
+    for ticker_code in ticker_dict:
+        ticker = ticker_code['Code']
+        tickers.append(ticker)
+    return tickers
+
+
 def read_tickers_from_file(file_path):
     """Read stock tickers from a text file."""
     if not os.path.exists(file_path):
@@ -34,8 +43,6 @@ def read_tickers_from_file(file_path):
     with open(file_path, 'r') as file:
         tickers = [line.split(',')[0].strip().upper() for line in file if line.strip()]
     return tickers
-
-
 
 
 def valid_start_date(s: str) -> datetime:
@@ -195,7 +202,7 @@ def get_pre_analysis_period(setup, calendar_days=True):
 def get_stock_selection_dates(start_date: datetime, end_date: datetime, setup, backtest=False,
                               feat_ext=False):
 
-    # Analysis days represents number to be analyzed as per setup + periods defined in setup to calculate averages
+    # Gross number of days to be fetched to match net days of analysis
     analysis_days = get_days_from_period(setup['Period']) + get_pre_analysis_period(setup)
 
     extract_feat_win = setup['Features']['period']

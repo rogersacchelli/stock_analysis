@@ -3,41 +3,42 @@ from momentum import rsi, add_adx
 import logging
 from utils.logging_config import logger
 from risk import get_stop_data
-from utils.utils import get_pre_analysis_period, store_filter_data, get_filter_data
+from utils.utils import get_pre_analysis_period, store_filter_data, get_filter_data, get_ticker_list
 from data_aquisition import fetch_yahoo_stock_data
 from dateutil.relativedelta import relativedelta
 from collections import defaultdict
 from trend import *
 from datetime import datetime
 from constants import Trade
+import yfinance as yf
 
 
 def select_stocks_from_setup(stock_list, setup, limit, start_date=None, end_date=None):
+
     analysis_data = {}
 
-    for ticker_code in stock_list:
-        ticker = ticker_code['Code']
-        logger.debug(f"Analyzing {ticker}...")
+    stock_data = fetch_yahoo_stock_data(get_ticker_list(stock_list), start_date=start_date, end_date=end_date)
 
-        try:
-            stock_data = fetch_yahoo_stock_data(ticker, start_date=start_date, end_date=end_date)
-        except Exception as e:
-            # Skip to next Ticket
-            error_message = f"Error fetching data for {ticker} - {str(e)}"
-            logger.error(str(error_message))
-            continue
+    for ticker in stock_data.columns.levels[0]:
+        # Extract data for this ticker into a new DataFrame
+        df = stock_data[ticker]
+
+        # Add arithmetic return
+        df['1d_Return'] = df['Close'].pct_change()
 
         # Add slope information to stock data
-        add_moving_average_slope(stock_data, setup)
-        # Add ADX
-        stock_data = add_adx(stock_data, setup)
-        # Add OBV
-        stock_data = calculate_obv(stock_data)
-        # Add Price Diff
-        stock_data = add_price_diff(stock_data)
-        # Add Stochastic data
-        add_stochastic_oscillator(stock_data, setup)
+        add_moving_average_slope(df, setup)
 
+        # Add ADX
+        add_adx(df, setup)
+
+        # Add OBV
+        calculate_obv(df)
+
+        # Add Stochastic data
+        add_stochastic_oscillator(df, setup)
+
+        # Process Data
         for analysis in setup['Analysis'].keys():
             for method in setup['Analysis'][analysis].keys():
 
@@ -45,32 +46,32 @@ def select_stocks_from_setup(stock_list, setup, limit, start_date=None, end_date
                     try:
                         if analysis == "Trend":
                             if method == "long_term":
-                                crossings = detect_long_term_crossings(stock_data=stock_data,
+                                crossings = detect_long_term_crossings(stock_data=df,
                                                                        setup=setup,
                                                                        end_date=end_date)
 
                             if method == "sma_cross" or method == "ema_cross":
 
-                                crossings = detect_ma_crossings(stock_data=stock_data, end_date=end_date, setup=setup,
+                                crossings = detect_ma_crossings(stock_data=df, end_date=end_date, setup=setup,
                                                                 method=method)
 
                             elif method == "bollinger_bands":
-                                crossings = detect_bollinger_crossings(stock_data=stock_data, setup=setup,
+                                crossings = detect_bollinger_crossings(stock_data=df, setup=setup,
                                                                        end_date=end_date)
 
                             elif method == "wr_rule":
-                                crossings = detect_wr_crossings(stock_data=stock_data, setup=setup, end_date=end_date)
+                                crossings = detect_wr_crossings(stock_data=df, setup=setup, end_date=end_date)
 
                             elif method == "macd":
-                                crossings = detect_macd_trend(stock_data, setup=setup, end_date=end_date)
+                                crossings = detect_macd_trend(df, setup=setup, end_date=end_date)
 
                         # Momentum
                         elif analysis == "Momentum":
                             if method == 'rsi':
-                                crossings = rsi(stock_data, setup, end_date=end_date)
+                                crossings = rsi(df, setup, end_date=end_date)
 
                         if not crossings.empty:
-                            if not analysis_filter(crossings, setup, method):
+                            if not analysis_filter(df, setup, method):
                                 logger.debug(f"Crossings found for {ticker} using {method}.")
 
                                 crossings.index = [ticker] * len(crossings)
@@ -90,12 +91,12 @@ def select_stocks_from_setup(stock_list, setup, limit, start_date=None, end_date
                         logger.error(error_message)
 
         # Add stock data
-        if not stock_data.empty:
+        if not df.empty:
             try:
                 analysis_data[ticker]
             except KeyError:
                 analysis_data.update({ticker: {}})
-            analysis_data[ticker].update({'stock_data': stock_data})
+            analysis_data[ticker].update({'stock_data': df})
             # Add ahead closing price data
             analysis_data[ticker]['stock_data'] = add_closing_price(analysis_data[ticker]['stock_data'], setup)
 
@@ -106,8 +107,8 @@ def select_stocks_from_setup(stock_list, setup, limit, start_date=None, end_date
 
             # Add date which stock would be stopped if reached min/max prices
             if setup['Risk']['Stop']['enabled']:
-                analysis_data[ticker].update({"stop": {"date_start": stock_data['Close'].tail(1).index,
-                                                       "price_start": stock_data['Close'].tail(1).values[0]}})
+                analysis_data[ticker].update({"stop": {"date_start": df['Close'].tail(1).index,
+                                                       "price_start": df['Close'].tail(1).values[0]}})
 
         # Break loop if limit is exceeded
         limit -= 1
@@ -488,7 +489,3 @@ def analysis_filter(data, setup, method):
     except ValueError as e:
         logger.error(f"Failed to validate if data meets thresholds limitations - {str(e)}")
 
-
-def add_price_diff(stock_data, type = 'Close'):
-    stock_data[f"Diff_{type}"] = stock_data[type].diff()
-    return stock_data

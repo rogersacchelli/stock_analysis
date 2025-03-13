@@ -1,32 +1,33 @@
-import datetime
+import logging
 import pickle
-from dateutil.relativedelta import relativedelta
 import yfinance as yf
 
-from utils.utils import get_hash, search_file, get_days_from_period
+from utils.utils import get_hash, search_file
 
-
-def fetch_yahoo_stock_data(ticker, start_date, end_date: datetime):
+def fetch_yahoo_stock_data(stock_list, start_date, end_date):
     """Fetch historical stock data for the given ticker."""
 
     # If no pickled data is found, then download it
-    stock_data = load_pickled_stock_data(ticker=ticker, start_date=start_date, end_date=end_date)
+    stock_data_hash = get_hash(f"{str(stock_list)}_"
+                               f"{start_date.strftime('YYYY-MM-DD')}_{end_date.strftime('YYYY-MM-DD')}")
+
+    stock_data = load_pickled_stock_data(stock_data_hash)
 
     if stock_data is None:
-        stock_data = yf.download(ticker, start=start_date, end=end_date, multi_level_index=False)
-        save_pickled_stock_data(ticker=ticker, start_date=start_date, end_date=end_date, data=stock_data)
+        stock_data = yf.download(stock_list, start=start_date, end=end_date,
+                                 group_by='ticker', auto_adjust=True)
+
+        save_pickled_stock_data(hash_value=stock_data_hash, data=stock_data)
 
     if stock_data.empty:
-        raise ValueError(f"No data available for ticker {ticker}.")
+        raise ValueError(f"Failed to fetch yahoo data!")
+        logging.ERROR(f"Failed to fetch yahoo data!")
     return stock_data
 
 
-def load_pickled_stock_data(ticker, start_date: datetime, end_date: datetime):
+def load_pickled_stock_data(hash_value):
 
-    start_date = start_date.strftime("%Y-%m-%d")
-    end_date = end_date.strftime("%Y-%m-%d")
-
-    filename = f"{ticker}_{start_date}_{end_date}.pkl"
+    filename = f"{hash_value}.pkl"
 
     if search_file('ticker_data', filename) is not None:
         with open(f"ticker_data/{filename}", "rb") as f:
@@ -35,12 +36,9 @@ def load_pickled_stock_data(ticker, start_date: datetime, end_date: datetime):
         return None
 
 
-def save_pickled_stock_data(ticker, start_date: datetime, end_date: datetime, data):
+def save_pickled_stock_data(hash_value, data):
 
-    start_date = start_date.strftime("%Y-%m-%d")
-    end_date = end_date.strftime("%Y-%m-%d")
-
-    filename = f"{ticker}_{start_date}_{end_date}.pkl"
+    filename = f"{hash_value}.pkl"
 
     if search_file('ticker_data', filename) is None:
         with open(f"ticker_data/{filename}", "wb") as file:
