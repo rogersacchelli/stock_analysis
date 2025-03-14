@@ -13,21 +13,14 @@
         "weight": 1.0,
         "name": "Long Term Crossing"
       },
-      "sma_cross": {
+      "ma_cross": {
         "enabled": 1,
         "long": 20,
         "short": 5,
         "output_window": 3,
+        "avg_type": "sma",
         "weight": 1.0,
         "name": "SMA Cross"
-      },
-      "ema_cross": {
-        "enabled": 0,
-        "long": 20,
-        "short": 5,
-        "output_window": 3,
-        "weight": 1.0,
-        "name": "EMA Cross"
       },
       "bollinger_bands": {
         "enabled": 1,

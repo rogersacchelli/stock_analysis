@@ -36,6 +36,7 @@ def detect_long_term_crossings(stock_data, setup, end_date, backtest=False):
         )
     )
 
+    """
     # Add a Date column and filter rows with crossings
     crossings = stock_data[stock_data[f"{method}_Cross"] != HOLD]
     crossings = crossings.reset_index()  # Reset index to access the Date column
@@ -50,21 +51,21 @@ def detect_long_term_crossings(stock_data, setup, end_date, backtest=False):
         return last_crossing
     else:
         return crossings
+    """
 
-
-def detect_ma_crossings(stock_data, setup, end_date, method, backtest=False):
+def detect_ma_crossings(stock_data, setup, end_date, backtest=False):
     """Detect days where SMA crosses."""
 
+    method = "ma_cross"
     short_window = setup['Analysis']['Trend'][method]['short']
     long_window = setup['Analysis']['Trend'][method]['long']
 
-    if method == "sma_cross":
-        average_type = "SMA" if method == "sma_cross" else "EMA"
+    avg_type = setup['Analysis']['Trend'][method]['avg_type']
 
-    if average_type == "SMA":
+    if avg_type == "sma":
         stock_data[f"Cross_Short"] = calculate_sma(stock_data['Close'], short_window)
         stock_data[f"Cross_Long"] = calculate_sma(stock_data['Close'], long_window)
-    elif average_type == "EMA":
+    elif avg_type == "ema":
         stock_data[f"Cross_Short"] = calculate_ema(stock_data['Close'], short_window)
         stock_data[f"Cross_Long"] = calculate_ema(stock_data['Close'], long_window)
 
@@ -80,7 +81,7 @@ def detect_ma_crossings(stock_data, setup, end_date, method, backtest=False):
             & (stock_data[f"Cross_Short"] < stock_data[f"Cross_Long"]), SELL, HOLD
         )
     )
-
+    """
     # Add a Date column and filter rows with crossings
     crossings = stock_data[stock_data[f"{method}_Cross"] != HOLD]
     crossings = crossings.reset_index()  # Reset index to access the Date column
@@ -95,6 +96,7 @@ def detect_ma_crossings(stock_data, setup, end_date, method, backtest=False):
         return last_crossing
     else:
         return crossings
+    """
 
 
 def detect_bollinger_crossings(stock_data, setup, end_date, backtest=False):
@@ -121,6 +123,7 @@ def detect_bollinger_crossings(stock_data, setup, end_date, backtest=False):
         (stock_data['Close'] >= stock_data['Upper_Band']) &
         (stock_data['Prev_Close'] < stock_data['Prev_Upper_Band']), f"{method}_Cross"] = SELL
 
+    """
     # Detect touches
     crossings = stock_data[stock_data[f"{method}_Cross"] != HOLD]
     crossings = crossings.reset_index()  # Reset index to access the Date column
@@ -135,6 +138,7 @@ def detect_bollinger_crossings(stock_data, setup, end_date, backtest=False):
         return last_crossing
     else:
         return crossings
+    """
 
 
 def detect_wr_crossings(stock_data, setup, end_date, backtest=False):
@@ -151,6 +155,7 @@ def detect_wr_crossings(stock_data, setup, end_date, backtest=False):
         lambda row: BUY if row['Close'] > row[f"W_High"] else (
             SELL if row['Close'] >= row[f"W_Low"] else None), axis=1)
 
+    """
     crossings = stock_data[stock_data[f"{method}_Cross"] != HOLD]
     crossings = crossings.reset_index()  # Reset index to access the Date column
 
@@ -165,6 +170,7 @@ def detect_wr_crossings(stock_data, setup, end_date, backtest=False):
         return last_crossing
     else:
         return crossings
+    """
 
 
 def detect_macd_trend(stock_data, setup, end_date, backtest=False):
@@ -201,6 +207,7 @@ def detect_macd_trend(stock_data, setup, end_date, backtest=False):
         )
     )
 
+    """
     crossings = stock_data[stock_data[f"{method}_Cross"] != HOLD]
     crossings = crossings.reset_index()  # Reset index to access the Date column
 
@@ -215,6 +222,7 @@ def detect_macd_trend(stock_data, setup, end_date, backtest=False):
         return last_crossing
     else:
         return crossings
+    """
 
 
 def calculate_ma_slope(stock_data, ma_period, slope_period, moving_average_type):
@@ -248,7 +256,7 @@ def calculate_ma_slope(stock_data, ma_period, slope_period, moving_average_type)
         window=slope_period).apply(slope_calc, raw=False)
 
 
-def calculate_obv(stock_data):
+def calculate_obv(stock_data, setup):
 
     # Calculate OBV
     obv = [0]

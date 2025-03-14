@@ -10,7 +10,6 @@ from collections import defaultdict
 from trend import *
 from datetime import datetime
 from constants import Trade
-import yfinance as yf
 
 
 def select_stocks_from_setup(stock_list, setup, limit, start_date=None, end_date=None):
@@ -26,6 +25,12 @@ def select_stocks_from_setup(stock_list, setup, limit, start_date=None, end_date
         # Add arithmetic return
         df['1d_Return'] = df['Close'].pct_change()
 
+        # Add Score
+        df['score'] = 0
+
+        # Add Action
+        df['action'] = None
+
         # Add slope information to stock data
         add_moving_average_slope(df, setup)
 
@@ -33,12 +38,29 @@ def select_stocks_from_setup(stock_list, setup, limit, start_date=None, end_date
         add_adx(df, setup)
 
         # Add OBV
-        calculate_obv(df)
+        calculate_obv(df, setup)
 
         # Add Stochastic data
         add_stochastic_oscillator(df, setup)
 
+        # Add Events Data
+        # Long Term Crossing
+        detect_long_term_crossings(stock_data=df, setup=setup, end_date=end_date)
+
+        # MA Crossing
+        detect_ma_crossings(stock_data=df, end_date=end_date, setup=setup)
+
+        # Bollinger Bands
+        detect_bollinger_crossings(stock_data=df, end_date=end_date, setup=setup)
+
+        # Week Rule
+        detect_wr_crossings(stock_data=df, setup=setup, end_date=end_date)
+
+        # MACD Crossing
+        detect_macd_trend(df, setup=setup, end_date=end_date)
+
         # Process Data
+        """
         for analysis in setup['Analysis'].keys():
             for method in setup['Analysis'][analysis].keys():
 
@@ -99,6 +121,10 @@ def select_stocks_from_setup(stock_list, setup, limit, start_date=None, end_date
             analysis_data[ticker].update({'stock_data': df})
             # Add ahead closing price data
             analysis_data[ticker]['stock_data'] = add_closing_price(analysis_data[ticker]['stock_data'], setup)
+        """
+
+        # Drop NA
+        df.dropna(inplace=True)
 
         # Calculate score
         if ticker in analysis_data:
