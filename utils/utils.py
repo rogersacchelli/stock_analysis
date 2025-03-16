@@ -4,6 +4,8 @@ import logging
 import sys
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
+
+from constants import SELL, BUY
 from utils.logging_config import logger
 import os
 import json
@@ -17,7 +19,6 @@ class LoadFromFile(argparse.Action):
 
 
 def get_hash(data):
-
     md5_hash = hashlib.md5()
     # Update the hash object with the bytes of the data
     md5_hash.update(data.encode('utf-8'))
@@ -84,7 +85,6 @@ def create_directories_if_not_exist(path):
 
 
 def get_days_from_period(period):
-
     if 'd' in period:
         period = period.replace('d', '')
         return int(period) * 1
@@ -106,7 +106,6 @@ def get_days_from_period(period):
 
 
 def analysis_to_file(analysis_data, setup, report_hash):
-
     logger.info(f"Saving analysis to file {report_hash}.csv")
 
     try:
@@ -154,7 +153,6 @@ def analysis_to_file(analysis_data, setup, report_hash):
 
 
 def position_results_to_file(position_results, setup, hash):
-
     with open(f"reports/{hash}-position.csv", mode='w') as f:
         output = "Ticker,Date Start,Price Start,Last Close,Volume,Gain %,Period,Profit [USD]\n"
         f.write(output)
@@ -166,7 +164,7 @@ def position_results_to_file(position_results, setup, hash):
                 gain = position_results[ticker][date]['gain']
                 period = position_results[ticker][date]['period'].days
                 volume = position_results[ticker][date]['volume']
-                profit = round(volume * (gain/100.0) * price_start, 2)
+                profit = round(volume * (gain / 100.0) * price_start, 2)
                 if (gain / 100.0) <= (setup['Risk']['Stop']['margin'] * -1.00):
                     output = f"**{ticker}**,{date},{price_start},{price_end},{volume},**{gain}**,{period}, {profit}\n"
                 else:
@@ -199,40 +197,14 @@ def get_pre_analysis_period(setup, calendar_days=True):
         return period
 
 
-def get_stock_selection_dates(start_date: datetime, end_date: datetime, setup, backtest=False,
-                              feat_ext=False):
+def get_stock_selection_dates(start_date: datetime, end_date: datetime, setup, backtest=False, feat_ext=False):
 
-    # Gross number of days to be fetched to match net days of analysis
-    analysis_days = get_days_from_period(setup['Period']) + get_pre_analysis_period(setup)
-
-    extract_feat_win = setup['Features']['period']
-
-    if backtest:
-        end_date = start_date - relativedelta(hours=1)  # Data up to day prior of backtest start_date
-    elif feat_ext:
-        # Feature Extraction Enabled
-        features_collection_period = (end_date - start_date).days
-        if not features_collection_period:
-            sys.exit(f"Feature extraction period needs to be at least 1 working days")
-
-        end_date_window = (datetime.today() - end_date).days
-
-        # Validate if there is enough window to get closing prices defined in Extract Features Window
-        if end_date_window < extract_feat_win:
-            sys.exit(f"Feature extraction end date needs to be at least {extract_feat_win} working days old")
-
-        start_date = start_date - relativedelta(days=analysis_days)
-        end_date = end_date + (relativedelta(days=extract_feat_win/5 * 7 + 10))
-
-        return start_date, end_date
-
-    start_date = end_date - relativedelta(days=analysis_days)
+    start_date = start_date - relativedelta(days=get_pre_analysis_period(setup))
 
     return start_date, end_date
 
 
 def store_filter_data(filter_data, method, analysis_ticker_data, setup):
-
     try:
         # Add filter data
         for ft in setup['Filters'].keys():
@@ -257,7 +229,6 @@ def store_filter_data(filter_data, method, analysis_ticker_data, setup):
 
 
 def get_filter_data(filter_data, result_output):
-
     try:
         for ft in filter_data.keys():
             for filter in filter_data[ft].keys():
@@ -273,9 +244,9 @@ def get_filter_data(filter_data, result_output):
                         dim += v[2]
                         n += 1
 
-                    adx = round(adx/n, 3)
-                    dip = round(dip/n, 3)
-                    dim = round(dim/n, 3)
+                    adx = round(adx / n, 3)
+                    dip = round(dip / n, 3)
+                    dim = round(dim / n, 3)
                     result_output += f",{adx},{dip},{dim}"
 
                     # clear data
@@ -289,5 +260,4 @@ def get_filter_data(filter_data, result_output):
         return result_output
     except ValueError as error:
         logger.error(f"{str(error)}")
-
 

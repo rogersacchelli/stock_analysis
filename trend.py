@@ -13,6 +13,9 @@ def calculate_sma(data, window=5):
 
 def detect_long_term_crossings(stock_data, setup, end_date, backtest=False):
 
+    if not setup['Analysis']['Trend']['long_term']['enabled']:
+        return
+
     method = 'long_term'
     period = setup['Analysis']['Trend'][method]['period']
     output_window = setup['Analysis']['Trend'][method]['output_window']
@@ -36,6 +39,8 @@ def detect_long_term_crossings(stock_data, setup, end_date, backtest=False):
         )
     )
 
+    stock_data.drop(columns=['Prev_Close', 'Prev_LT_MA'], inplace=True)
+
     """
     # Add a Date column and filter rows with crossings
     crossings = stock_data[stock_data[f"{method}_Cross"] != HOLD]
@@ -53,10 +58,14 @@ def detect_long_term_crossings(stock_data, setup, end_date, backtest=False):
         return crossings
     """
 
+
 def detect_ma_crossings(stock_data, setup, end_date, backtest=False):
     """Detect days where SMA crosses."""
 
     method = "ma_cross"
+    if not setup['Analysis']['Trend'][method]['enabled']:
+        return
+
     short_window = setup['Analysis']['Trend'][method]['short']
     long_window = setup['Analysis']['Trend'][method]['long']
 
@@ -81,6 +90,9 @@ def detect_ma_crossings(stock_data, setup, end_date, backtest=False):
             & (stock_data[f"Cross_Short"] < stock_data[f"Cross_Long"]), SELL, HOLD
         )
     )
+
+    stock_data.drop(columns=['Prev_Cross_Short', 'Prev_Cross_Long', 'Cross_Short', 'Cross_Long'], inplace=True)
+
     """
     # Add a Date column and filter rows with crossings
     crossings = stock_data[stock_data[f"{method}_Cross"] != HOLD]
@@ -102,6 +114,9 @@ def detect_ma_crossings(stock_data, setup, end_date, backtest=False):
 def detect_bollinger_crossings(stock_data, setup, end_date, backtest=False):
 
     method = "bollinger_bands"
+    if not setup['Analysis']['Trend'][method]['enabled']:
+        return
+
     period = setup['Analysis']['Trend'][method]['period']
     std_dev = setup['Analysis']['Trend'][method]['std_dev']
     output_window = setup['Analysis']['Trend'][method]['output_window']
@@ -122,6 +137,9 @@ def detect_bollinger_crossings(stock_data, setup, end_date, backtest=False):
     stock_data.loc[
         (stock_data['Close'] >= stock_data['Upper_Band']) &
         (stock_data['Prev_Close'] < stock_data['Prev_Upper_Band']), f"{method}_Cross"] = SELL
+
+    stock_data.drop(columns=['Upper_Band', 'Lower_Band', 'BB', 'Prev_Close', 'Prev_Lower_Band', 'Prev_Upper_Band'],
+                    inplace=True)
 
     """
     # Detect touches
@@ -144,6 +162,9 @@ def detect_bollinger_crossings(stock_data, setup, end_date, backtest=False):
 def detect_wr_crossings(stock_data, setup, end_date, backtest=False):
 
     method = "week_rule"
+    if not setup['Analysis']['Trend'][method]['enabled']:
+        return
+
     period = setup['Analysis']['Trend'][method]['period']
 
     # Calculate prior 4-week highs and lows (shifted by 1 day)
@@ -153,7 +174,9 @@ def detect_wr_crossings(stock_data, setup, end_date, backtest=False):
     # Detect touches
     stock_data['WR_Cross'] = stock_data.apply(
         lambda row: BUY if row['Close'] > row[f"W_High"] else (
-            SELL if row['Close'] >= row[f"W_Low"] else None), axis=1)
+            SELL if row['Close'] >= row[f"W_Low"] else 0), axis=1)
+
+    stock_data.drop(columns=['W_High', 'W_Low'], inplace=True)
 
     """
     crossings = stock_data[stock_data[f"{method}_Cross"] != HOLD]
@@ -179,6 +202,9 @@ def detect_macd_trend(stock_data, setup, end_date, backtest=False):
     """
 
     method = "macd"
+    if not setup['Analysis']['Trend'][method]['enabled']:
+        return
+
     short_window = setup['Analysis']['Trend'][method]['short']
     long_window = setup['Analysis']['Trend'][method]['long']
     signal_window = setup['Analysis']['Trend'][method]['signal_window']
@@ -206,6 +232,9 @@ def detect_macd_trend(stock_data, setup, end_date, backtest=False):
             HOLD
         )
     )
+
+    stock_data.drop(columns=['MACD_Prev_short_long', 'MACD_Prev_SIGNAL_WINDOW', 'EMA_short', 'EMA_long'], inplace=True)
+
 
     """
     crossings = stock_data[stock_data[f"{method}_Cross"] != HOLD]
@@ -291,6 +320,8 @@ def add_stochastic_oscillator(stock_data, setup):
     stock_data['Stoch_%K'] = ((stock_data['Close'] - stock_data['Stoch_Low_Min']) / (stock_data['Stoch_High_Max'] - stock_data['Stoch_Low_Min'])) * 100
     stock_data['Stoch_%K'] = stock_data['Stoch_%K'].rolling(window=smooth_k).mean()  # Smooth %K
     stock_data['Stoch_%D'] = stock_data['Stoch_%K'].rolling(window=smooth_d).mean()  # %D = SMA of %K
+
+    stock_data.drop(columns=['Stoch_Low_Min', 'Stoch_High_Max'], inplace=True)
 
 
 def detect_stochastic_crossings(stock_data):

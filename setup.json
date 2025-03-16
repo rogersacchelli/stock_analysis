@@ -115,7 +115,7 @@
   },
   "Thresholds": {
     "Buy": 0.3,
-    "Sell": -0.4
+    "Sell": -0.2
   },
   "Risk": {
     "Stop": {
@@ -128,5 +128,9 @@
     "enabled": 0,
     "period": 30,
     "feat_list": ["High", "Low", "Close","Open"]
+  },
+  "Portfolio": {
+    "cash": 10000.00,
+    "position_size": 0.1
   }
 }

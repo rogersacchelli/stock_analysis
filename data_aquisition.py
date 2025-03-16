@@ -4,12 +4,12 @@ import yfinance as yf
 
 from utils.utils import get_hash, search_file
 
+
 def fetch_yahoo_stock_data(stock_list, start_date, end_date):
     """Fetch historical stock data for the given ticker."""
 
     # If no pickled data is found, then download it
-    stock_data_hash = get_hash(f"{str(stock_list)}_"
-                               f"{start_date.strftime('YYYY-MM-DD')}_{end_date.strftime('YYYY-MM-DD')}")
+    stock_data_hash = get_hash(f"{str(stock_list)}_{start_date.strftime('%Y-%m-%d')}_{end_date.strftime('%Y-%m-%d')}")
 
     stock_data = load_pickled_stock_data(stock_data_hash)
 

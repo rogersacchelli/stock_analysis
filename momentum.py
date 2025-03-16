@@ -5,6 +5,9 @@ from constants import *
 
 def rsi(stock_data, setup, end_date, backtest=False):
 
+    if not setup['Analysis']['Momentum']['rsi']['enabled']:
+        return
+
     # Get period from setup
     period = setup['Analysis']['Momentum']['rsi']['period']
 
@@ -57,6 +60,8 @@ def rsi_add_cross_signal(stock_data, setup):
         :return: DataFrame with added 'cross' column
     """
 
+
+
     conditions = [
         stock_data['RSI'] < setup['Analysis']['Momentum']['rsi']['lower'],
         stock_data['RSI'] > setup['Analysis']['Momentum']['rsi']['upper']
@@ -108,6 +113,6 @@ def add_adx(df, setup):
     df['ADX'] = df['DX'].rolling(window=period).mean()
 
     # Clean up intermediate columns
-    df = df.drop(columns=['High-Low', 'High-Close', 'Low-Close', 'TR', '+DM', '-DM',
-                          'TR_SMA', '+DM_SMA', '-DM_SMA', 'DX'])
-    return df
+    df.drop(columns=['High-Low', 'High-Close', 'Low-Close', 'TR', '+DM', '-DM',
+                     'TR_SMA', '+DM_SMA', '-DM_SMA', 'DX', 'DI+', 'DI-'],
+            inplace=True)
