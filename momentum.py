@@ -3,7 +3,7 @@ import numpy as np
 from constants import *
 
 
-def rsi(stock_data, setup, end_date, backtest=False):
+def add_rsi(stock_data, setup, backtest=False):
 
     if not setup['Analysis']['Momentum']['rsi']['enabled']:
         return
@@ -37,15 +37,7 @@ def rsi(stock_data, setup, end_date, backtest=False):
     crossings = stock_data[stock_data[f"rsi_Cross"] != HOLD]
     crossings = crossings.reset_index()  # Reset index to access the Date column
 
-    if not backtest:
-        output_window = setup['Analysis']['Momentum']['rsi']['output_window']
-        today = np.datetime64(end_date)
-
-        cutoff_date = today - np.timedelta64(output_window, 'D')
-        last_crossing = crossings[crossings['Date'] >= cutoff_date].sort_values(by='Date').tail(1)
-        return last_crossing
-    else:
-        return crossings
+    return crossings
 
 
 def rsi_add_cross_signal(stock_data, setup):
@@ -59,8 +51,6 @@ def rsi_add_cross_signal(stock_data, setup):
         :param setup: Setup json file
         :return: DataFrame with added 'cross' column
     """
-
-
 
     conditions = [
         stock_data['RSI'] < setup['Analysis']['Momentum']['rsi']['lower'],
@@ -82,6 +72,9 @@ def add_adx(df, setup):
     Returns:
         pd.DataFrame: DataFrame with ADX, +DI, and DI- columns added.
     """
+
+    if not setup['Filters']['Momentum']['adx']['enabled']:
+        return
 
     period = setup['Filters']['Momentum']['adx']['period']
 

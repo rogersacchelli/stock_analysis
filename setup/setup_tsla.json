@@ -5,7 +5,7 @@
   "Analysis": {
     "Trend": {
       "long_term": {
-        "enabled": 1,
+        "enabled": 0,
         "period": 40,
         "rate": 0.01,
         "output_window": 3,
@@ -15,15 +15,15 @@
       },
       "ma_cross": {
         "enabled": 1,
-        "long": 20,
-        "short": 5,
-        "output_window": 3,
+        "long": 10,
+        "short": 3,
+        "output_window": 1,
         "avg_type": "sma",
         "weight": 1.0,
         "name": "SMA Cross"
       },
       "bollinger_bands": {
-        "enabled": 1,
+        "enabled": 0,
         "avg_type": "sma",
         "period": 20,
         "output_window": 3,
@@ -39,7 +39,7 @@
         "name": "Week Rule"
       },
       "macd": {
-        "enabled": 1,
+        "enabled": 0,
         "average_type": "ema",
         "short": 5,
         "long": 20,
@@ -49,7 +49,7 @@
         "name": "MACD"
       },
       "stochastic": {
-        "enabled": 1,
+        "enabled": 0,
         "period": 14,
         "smooth_k": 3,
         "smooth_d": 3,
@@ -60,21 +60,22 @@
   },
     "Momentum": {
       "rsi": {
-        "enabled": 1,
-        "period": 14,
+        "enabled": 0,
+        "period": 9,
         "output_window": 3,
         "lower": 30,
-        "upper": 70,
+        "upper": 75,
         "weight": 3.0,
         "name": "RSI"
       }
-  }
+    },
+    "Volume": {
+      "OBV": {
+        "enabled": 0
+      }
+    }
   },
-  "Volume": {},
-  "Sup/Res": {},
   "Volatility": {},
-  "Patterns": {},
-  "Cycles": {},
   "Sentiment": {},
   "Period": "3mo",
   "Short": 1,
@@ -105,7 +106,7 @@
     },
     "Momentum": {
       "adx": {
-        "enabled": 1,
+        "enabled": 0,
         "adx": [0, 40],
         "di+": [0, 40],
         "di-": [0, 40],
@@ -114,14 +115,24 @@
     }
   },
   "Thresholds": {
-    "Buy": 0.3,
-    "Sell": -0.2
+    "Buy": 0.1,
+    "Sell": -0.1
   },
   "Risk": {
     "Stop": {
       "enabled": 1,
       "warning": 0.01,
       "margin": 0.03
+    },
+    "SharpeRatio": {
+      "enabled": 0,
+      "min": 0.3,
+      "LoopbackPeriod": 90,
+      "TradingDays": 252
+    },
+    "SortinoRatio": {
+      "enabled": true,
+      "min": 0.5
     }
   },
   "Features": {

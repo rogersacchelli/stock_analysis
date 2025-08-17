@@ -1,6 +1,8 @@
 import pandas as pd
-
+import yfinance as yf
 from constants import BUY, SELL
+from data_aquisition import fetch_yahoo_stock_data
+from tabulate import tabulate
 
 
 def portfolio_manager(signals_dict, setup):
@@ -86,7 +88,7 @@ def portfolio_manager(signals_dict, setup):
     return trades_df
 
 
-def calculate_trade_metrics(trades_df, setup):
+def calculate_trade_metrics(trades_df, benchmark, setup):
     """
     Calculate trading metrics, handling multiple trades per symbol chronologically.
 
@@ -99,6 +101,7 @@ def calculate_trade_metrics(trades_df, setup):
     """
 
     initial_cash = setup['Portfolio']['cash']
+    trade_fee = 1.0     # TODO: get this from setup
 
     # Sort trades by date to ensure chronological order
     trades_df = trades_df.sort_values('date').reset_index(drop=True)
@@ -166,11 +169,58 @@ def calculate_trade_metrics(trades_df, setup):
         drawdown = (peak - equity) / peak * 100 if peak > 0 else 0.0
         max_drawdown = max(max_drawdown, drawdown)
 
-    return {
+    output = {
         'win_ratio': win_ratio,
         'total_profit': total_profit,
         'total_return': total_return,
         'avg_trade_profit': avg_trade_profit,
-        'max_drawdown': max_drawdown
+        'max_drawdown': max_drawdown,
+        'total_trades': total_trades,
+        'fees': total_trades * trade_fee,
+        'benchmark': benchmark
     }
 
+    return output
+
+
+def calculate_ticker_gain(ticker, start_date, end_date):
+    """
+    Fetch ticker data from Yahoo Finance and calculate the percentage gain over the period.
+
+    Parameters:
+    - ticker (str): Ticker symbol (e.g., 'AAPL').
+    - start_date (str): Start date in 'YYYY-MM-DD' format.
+    - end_date (str): End date in 'YYYY-MM-DD' format.
+
+    Returns:
+    - dict: Dictionary containing the ticker and percentage gain (e.g., {'ticker': 'AAPL', 'gain': 10.25}).
+
+    Raises:
+    - ValueError: If data retrieval fails or insufficient data is available.
+    """
+    try:
+        # Fetch historical data
+        stock = yf.Ticker(ticker)
+        data = stock.history(start=start_date, end=end_date)
+
+        # Check if data is empty
+        if data.empty:
+            raise ValueError(f"No data retrieved for {ticker} from {start_date} to {end_date}")
+
+        # Extract adjusted closing prices
+        adj_close = data['Close']
+
+        # Get start and end prices
+        start_price = adj_close.iloc[0]
+        end_price = adj_close.iloc[-1]
+
+        # Calculate percentage gain
+        gain = ((end_price - start_price) / start_price) * 100
+
+        # Return result as dictionary
+        return {
+            ticker: round(gain, 2)  # Round to 2 decimal places
+        }
+
+    except Exception as e:
+        raise ValueError(f"Error calculating gain for {ticker}: {str(e)}")

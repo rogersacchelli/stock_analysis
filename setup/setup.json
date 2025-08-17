@@ -1,0 +1,147 @@
+{
+  "Stocks": {
+    "Tickers": "AMD, ABBV, ALB, AAL, CPB, TSLA"
+  },
+  "Analysis": {
+    "Trend": {
+      "long_term": {
+        "enabled": 0,
+        "period": 40,
+        "rate": 0.01,
+        "output_window": 3,
+        "avg_type": "sma",
+        "weight": 1.0,
+        "name": "Long Term Crossing"
+      },
+      "ma_cross": {
+        "enabled": 1,
+        "long": 25,
+        "short": 5,
+        "output_window": 1,
+        "avg_type": "sma",
+        "weight": 1.0,
+        "name": "SMA Cross"
+      },
+      "bollinger_bands": {
+        "enabled": 0,
+        "avg_type": "sma",
+        "period": 20,
+        "output_window": 3,
+        "std_dev": 2,
+        "weight": 1.0,
+        "name": "Bollinger Bands"
+      },
+      "week_rule": {
+        "enabled": 0,
+        "period": 4,
+        "output_window": 3,
+        "weight": 1.0,
+        "name": "Week Rule"
+      },
+      "macd": {
+        "enabled": 0,
+        "average_type": "ema",
+        "short": 5,
+        "long": 20,
+        "signal_window": 9,
+        "output_window": 3,
+        "weight": 2.0,
+        "name": "MACD"
+      },
+      "stochastic": {
+        "enabled": 0,
+        "period": 14,
+        "smooth_k": 3,
+        "smooth_d": 3,
+        "output_window": 3,
+        "weight": 2.0,
+        "name": "Stochastic Osc"
+      }
+  },
+    "Momentum": {
+      "rsi": {
+        "enabled": 1,
+        "period": 9,
+        "output_window": 3,
+        "lower": 30,
+        "upper": 75,
+        "weight": 3.0,
+        "name": "RSI"
+      }
+    },
+    "Volume": {
+      "OBV": {
+        "enabled": 0
+      }
+    }
+  },
+  "Volatility": {},
+  "Sentiment": {},
+  "Period": "3mo",
+  "Short": 1,
+  "Observation": ["MSFT", "NVDA", "PLTR", "TSLA"],
+  "Filters": {
+    "Trend": {
+      "short": {
+        "enabled": 0,
+        "type": "sma",
+        "period": 5,
+        "slope_period": 3,
+        "slope": 0.0
+      },
+      "middle": {
+        "enabled": 0,
+        "type": "sma",
+        "period": 20,
+        "slope_period": 3,
+        "slope": 0.0
+      },
+      "long": {
+        "enabled": 0,
+        "type": "sma",
+        "period": 50,
+        "slope_period": 3,
+        "slope": 0.1
+      }
+    },
+    "Momentum": {
+      "adx": {
+        "enabled": 0,
+        "adx": [0, 40],
+        "di+": [0, 40],
+        "di-": [0, 40],
+        "period": 14
+      }
+    }
+  },
+  "Thresholds": {
+    "Buy": 0.1,
+    "Sell": -0.1
+  },
+  "Risk": {
+    "Stop": {
+      "enabled": 1,
+      "warning": 0.01,
+      "margin": 0.03
+    },
+    "SharpeRatio": {
+      "enabled": 0,
+      "min": 0.3,
+      "LoopbackPeriod": 90,
+      "TradingDays": 252
+    },
+    "SortinoRatio": {
+      "enabled": true,
+      "min": 0.5
+    }
+  },
+  "Features": {
+    "enabled": 0,
+    "period": 30,
+    "feat_list": ["High", "Low", "Close","Open"]
+  },
+  "Portfolio": {
+    "cash": 100000.00,
+    "position_size": 0.1
+  }
+}

@@ -30,7 +30,7 @@ def argument_parsing():
                         help="The start date which is intended to assess the stocks for backtest or "
                              "feature extraction - format YYYY-MM-DD")
     parser.add_argument('-ed', '--end_date', type=valid_date,
-                        default=datetime.combine(datetime.now().date(), datetime.min.time())+relativedelta(hours=23),
+                        default=datetime.combine(datetime.now().date(), datetime.min.time())-relativedelta(hours=1),
                         help="The end date of evaluation - format YYYY-MM-DD")
     return parser.parse_args()
 

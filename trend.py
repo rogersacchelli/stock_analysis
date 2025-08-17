@@ -208,40 +208,40 @@ def detect_macd_trend(stock_data, setup, end_date, backtest=False):
     short_window = setup['Analysis']['Trend'][method]['short']
     long_window = setup['Analysis']['Trend'][method]['long']
     signal_window = setup['Analysis']['Trend'][method]['signal_window']
-    output_window = setup['Analysis']['Trend'][method]['signal_window']
+    output_window = setup['Analysis']['Trend'][method]['output_window']
 
     stock_data[f"EMA_short"] = stock_data['Close'].ewm(span=short_window, adjust=False).mean()
     stock_data[f"EMA_long"] = stock_data['Close'].ewm(span=long_window, adjust=False).mean()
 
     stock_data[f"MACD_short_long"] = stock_data[f"EMA_short"] - stock_data[f"EMA_long"]
 
-    stock_data[f"MACD_SIGNAL_WINDOW"] = stock_data[f"MACD_short_long"].rolling(window=signal_window).mean()
+    stock_data[f"MACD_SIGNAL"] = stock_data[f"MACD_short_long"].rolling(window=signal_window).mean()
 
     stock_data[f"MACD_Prev_short_long"] = stock_data[f"MACD_short_long"].shift(1)
-    stock_data[f"MACD_Prev_SIGNAL_WINDOW"] = stock_data[f"MACD_SIGNAL_WINDOW"].shift(1)
+    stock_data[f"MACD_Prev_SIGNAL"] = stock_data[f"MACD_SIGNAL"].shift(1)
 
     # Identify crossing points
     stock_data[f"{method}_Cross"] = np.where(
-        (stock_data[f"MACD_Prev_short_long"] <= stock_data[f"MACD_Prev_SIGNAL_WINDOW"]) &
-        (stock_data[f"MACD_short_long"] > stock_data[f"MACD_SIGNAL_WINDOW"]),
+        (stock_data[f"MACD_Prev_short_long"] <= stock_data[f"MACD_Prev_SIGNAL"]) &
+        (stock_data[f"MACD_short_long"] > stock_data[f"MACD_SIGNAL"]),
         BUY,
         np.where(
-            (stock_data[f"MACD_Prev_short_long"] >= stock_data[f"MACD_Prev_SIGNAL_WINDOW"]) &
-            (stock_data[f"MACD_short_long"] < stock_data[f"MACD_SIGNAL_WINDOW"]),
+            (stock_data[f"MACD_Prev_short_long"] >= stock_data[f"MACD_Prev_SIGNAL"]) &
+            (stock_data[f"MACD_short_long"] < stock_data[f"MACD_SIGNAL"]),
             SELL,
             HOLD
         )
     )
 
-    stock_data.drop(columns=['MACD_Prev_short_long', 'MACD_Prev_SIGNAL_WINDOW', 'EMA_short', 'EMA_long'], inplace=True)
+    stock_data.drop(columns=['MACD_Prev_short_long', 'MACD_Prev_SIGNAL', 'EMA_short', 'EMA_long'], inplace=True)
 
 
     """
     crossings = stock_data[stock_data[f"{method}_Cross"] != HOLD]
     crossings = crossings.reset_index()  # Reset index to access the Date column
 
-    stock_data.drop(['EMA_short', 'EMA_short', 'MACD_short_long', 'MACD_Prev_short_long', 'MACD_SIGNAL_WINDOW',
-                     'MACD_Prev_SIGNAL_WINDOW'], axis=1, inplace=True)
+    stock_data.drop(['EMA_short', 'EMA_short', 'MACD_short_long', 'MACD_Prev_short_long', 'MACD_SIGNAL',
+                     'MACD_Prev_SIGNAL'], axis=1, inplace=True)
 
     if not backtest:
         today = np.datetime64(end_date)
@@ -287,6 +287,9 @@ def calculate_ma_slope(stock_data, ma_period, slope_period, moving_average_type)
 
 def calculate_obv(stock_data, setup):
 
+    if not setup['Analysis']['Volume']['OBV']['enabled']:
+        return
+
     # Calculate OBV
     obv = [0]
 
@@ -309,6 +312,9 @@ def calculate_obv(stock_data, setup):
 
 
 def add_stochastic_oscillator(stock_data, setup):
+
+    if not setup['Analysis']['Trend']['stochastic']['enabled']:
+        return
 
     period=setup['Analysis']['Trend']['stochastic']['period']
     smooth_k=setup['Analysis']['Trend']['stochastic']['smooth_k']

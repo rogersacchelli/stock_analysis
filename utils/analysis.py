@@ -1,7 +1,7 @@
-from momentum import rsi, add_adx
+from momentum import add_adx, add_rsi
 import logging
 from utils.logging_config import logger
-from risk import get_stop_data
+from risk import get_stop_data, add_shape_ratio, add_sortino_ratio
 from utils.utils import get_pre_analysis_period, store_filter_data, get_filter_data, get_ticker_list, \
     get_stock_selection_dates
 from data_aquisition import fetch_yahoo_stock_data
@@ -23,55 +23,83 @@ def get_stock_signals(stock_list, setup, limit, start_date=None, end_date=None):
                                         start_date=analysis_start_date,
                                         end_date=analysis_end_date)
 
+    # Get SP500 and 3Mo Treasury bills data for benchmarks
+    benchmark_idx = fetch_yahoo_stock_data(['^SPX', '^IRX'],
+                                           start_date=analysis_start_date,
+                                           end_date=analysis_end_date)
+
+    # Fetch VIX data
+    vix_idx = fetch_yahoo_stock_data(['^VIX'],
+                                           start_date=analysis_start_date,
+                                           end_date=analysis_end_date)
+
     for ticker in stock_data.columns.levels[0]:
         # Extract data for this ticker into a new DataFrame
         df = stock_data[ticker]
 
         # Add arithmetic return
-        df['1d_Return'] = df['Close'].pct_change(fill_method=None)
+        df['daily_return'] = df['Close'].pct_change(fill_method=None)
 
-        # Add slope information to stock data
-        add_moving_average_slope(df, setup)
+        # Add VIX
+        #df['vix'] = vix_idx.Close
 
-        # Add ADX
-        add_adx(df, setup)
+        try:
+            # Add Sharpe Ratio
+            irx = benchmark_idx['^IRX']
+            add_shape_ratio(df, irx, setup)
 
-        # Add OBV
-        calculate_obv(df, setup)
+            # Add Sortino Ratio
+            add_sortino_ratio(df, irx)
 
-        # Add Stochastic data
-        add_stochastic_oscillator(df, setup)
+            # Add slope information to stock data
+            add_moving_average_slope(df, setup)
 
-        # Add Events Data
-        # Long Term Crossing
-        detect_long_term_crossings(stock_data=df, setup=setup, end_date=end_date)
+            # Add ADX
+            add_adx(df, setup)
 
-        # MA Crossing
-        detect_ma_crossings(stock_data=df, end_date=end_date, setup=setup)
+            # Add RSI
+            add_rsi(df, setup)
 
-        # Bollinger Bands
-        detect_bollinger_crossings(stock_data=df, end_date=end_date, setup=setup)
+            # Add OBV
+            calculate_obv(df, setup)
 
-        # Week Rule
-        detect_wr_crossings(stock_data=df, setup=setup, end_date=end_date)
+            # Add Stochastic data
+            add_stochastic_oscillator(df, setup)
 
-        # MACD Crossing
-        detect_macd_trend(df, setup=setup, end_date=end_date)
+            # Add Events Data
+            # Long Term Crossing
+            detect_long_term_crossings(stock_data=df, setup=setup, end_date=end_date)
 
-        # Drop NA and remove auxiliary data
-        df.dropna(inplace=True)
-        df = df[df.index >= start_date]
+            # MA Crossing
+            detect_ma_crossings(stock_data=df, end_date=end_date, setup=setup)
 
-        # Calculate score
-        set_score_action(df, setup)
+            # Bollinger Bands
+            detect_bollinger_crossings(stock_data=df, end_date=end_date, setup=setup)
 
-        if len(df[df['Action'] != HOLD]):
-            signal_data[ticker] = df
+            # Week Rule
+            detect_wr_crossings(stock_data=df, setup=setup, end_date=end_date)
 
-        # Break loop if limit is exceeded
-        limit -= 1
-        if limit == 0:
-            break
+            # MACD Crossing
+            detect_macd_trend(df, setup=setup, end_date=end_date)
+
+            # Drop NA and remove auxiliary data
+            df.dropna(inplace=True)
+            df = df[df.index >= start_date]
+
+            # Calculate score
+            set_score_action(df, setup)
+
+            if len(df[df['Action'] != HOLD]):
+                signal_data[ticker] = df
+
+            signal_data[ticker] = signal_data[ticker][signal_data[ticker]['Action'] != 0]
+
+            # Break loop if limit is exceeded
+            limit -= 1
+            if limit == 0:
+                break
+        except ValueError as e:
+            logger.error(f"{ticker} - {e}")
 
     return signal_data
 

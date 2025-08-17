@@ -14,8 +14,9 @@ def fetch_yahoo_stock_data(stock_list, start_date, end_date):
     stock_data = load_pickled_stock_data(stock_data_hash)
 
     if stock_data is None:
+
         stock_data = yf.download(stock_list, start=start_date, end=end_date,
-                                 group_by='ticker', auto_adjust=True)
+                                 threads=False, group_by='ticker', auto_adjust=True)
 
         save_pickled_stock_data(hash_value=stock_data_hash, data=stock_data)
 

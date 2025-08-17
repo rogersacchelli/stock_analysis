@@ -1,7 +1,6 @@
 import hashlib
 import argparse
 import logging
-import sys
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 
@@ -32,7 +31,7 @@ def get_ticker_list(ticker_dict):
     # List of Dicts for each ticker
     tickers = []
     for ticker_code in ticker_dict:
-        ticker = ticker_code['Code']
+        ticker = ticker_code['Symbol']
         tickers.append(ticker)
     return tickers
 
@@ -55,7 +54,7 @@ def valid_start_date(s: str) -> datetime:
         raise argparse.ArgumentTypeError(f"not a valid date: {s!r}")
 
 
-def valid_end_date(s: str | None) -> datetime:
+def valid_end_date(s: str) -> datetime:
     try:
         if s is None:
             return datetime.now()
@@ -260,4 +259,7 @@ def get_filter_data(filter_data, result_output):
         return result_output
     except ValueError as error:
         logger.error(f"{str(error)}")
+
+
+
 

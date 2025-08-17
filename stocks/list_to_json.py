@@ -1,8 +1,8 @@
 import json
 
 # Input file containing rows of data
-input_file = "ibov.list"
-output_file = "ibov.json"
+input_file = "sp500_top100_volume.list"
+output_file = "sp500_top100_volume.json"
 
 # Read data from the file
 with open(input_file, "r") as file:
@@ -11,9 +11,9 @@ with open(input_file, "r") as file:
 # Process each row and convert to JSON
 json_list = []
 for row in rows:
-    columns = row.strip().split(",")
+    columns = row.strip().split("\t")
     json_data = {
-        "Code": columns[0],
+        "Symbol": columns[0],
         "Company": columns[1],
         #"Sector": columns[2]
     }
