@@ -1,0 +1,402 @@
+[
+    {
+        "Symbol": "NVDA",
+        "Company": "Nvidia"
+    },
+    {
+        "Symbol": "INTC",
+        "Company": "Intel"
+    },
+    {
+        "Symbol": "AMD",
+        "Company": "Advanced Micro Devices"
+    },
+    {
+        "Symbol": "TSLA",
+        "Company": "Tesla, Inc."
+    },
+    {
+        "Symbol": "AAPL",
+        "Company": "Apple Inc."
+    },
+    {
+        "Symbol": "PLTR",
+        "Company": "Palantir Technologies"
+    },
+    {
+        "Symbol": "F",
+        "Company": "Ford Motor Company"
+    },
+    {
+        "Symbol": "AMZN",
+        "Company": "Amazon"
+    },
+    {
+        "Symbol": "WBD",
+        "Company": "Warner Bros. Discovery"
+    },
+    {
+        "Symbol": "PFE",
+        "Company": "Pfizer"
+    },
+    {
+        "Symbol": "SMCI",
+        "Company": "Supermicro"
+    },
+    {
+        "Symbol": "PSKY",
+        "Company": "Paramount Skydance Corporation"
+    },
+    {
+        "Symbol": "BAC",
+        "Company": "Bank of America"
+    },
+    {
+        "Symbol": "GOOGL",
+        "Company": "Alphabet Inc. (Class A)"
+    },
+    {
+        "Symbol": "T",
+        "Company": "AT&T"
+    },
+    {
+        "Symbol": "KEY",
+        "Company": "KeyCorp"
+    },
+    {
+        "Symbol": "PCG",
+        "Company": "PG&E Corporation"
+    },
+    {
+        "Symbol": "AMCR",
+        "Company": "Amcor"
+    },
+    {
+        "Symbol": "TTD",
+        "Company": "Trade Desk (The)"
+    },
+    {
+        "Symbol": "HBAN",
+        "Company": "Huntington Bancshares"
+    },
+    {
+        "Symbol": "CSCO",
+        "Company": "Cisco"
+    },
+    {
+        "Symbol": "CMCSA",
+        "Company": "Comcast"
+    },
+    {
+        "Symbol": "KVUE",
+        "Company": "Kenvue"
+    },
+    {
+        "Symbol": "UBER",
+        "Company": "Uber"
+    },
+    {
+        "Symbol": "MU",
+        "Company": "Micron Technology"
+    },
+    {
+        "Symbol": "MSFT",
+        "Company": "Microsoft"
+    },
+    {
+        "Symbol": "GOOG",
+        "Company": "Alphabet Inc. (Class C)"
+    },
+    {
+        "Symbol": "UNH",
+        "Company": "UnitedHealth Group"
+    },
+    {
+        "Symbol": "CMG",
+        "Company": "Chipotle Mexican Grill"
+    },
+    {
+        "Symbol": "KMI",
+        "Company": "Kinder Morgan"
+    },
+    {
+        "Symbol": "DOW",
+        "Company": "Dow Inc."
+    },
+    {
+        "Symbol": "AVGO",
+        "Company": "Broadcom"
+    },
+    {
+        "Symbol": "CCL",
+        "Company": "Carnival"
+    },
+    {
+        "Symbol": "WMT",
+        "Company": "Walmart"
+    },
+    {
+        "Symbol": "XOM",
+        "Company": "ExxonMobil"
+    },
+    {
+        "Symbol": "CSX",
+        "Company": "CSX Corporation"
+    },
+    {
+        "Symbol": "C",
+        "Company": "Citigroup"
+    },
+    {
+        "Symbol": "HPE",
+        "Company": "Hewlett Packard Enterprise"
+    },
+    {
+        "Symbol": "COIN",
+        "Company": "Coinbase"
+    },
+    {
+        "Symbol": "WFC",
+        "Company": "Wells Fargo"
+    },
+    {
+        "Symbol": "VZ",
+        "Company": "Verizon"
+    },
+    {
+        "Symbol": "CNC",
+        "Company": "Centene Corporation"
+    },
+    {
+        "Symbol": "FTNT",
+        "Company": "Fortinet"
+    },
+    {
+        "Symbol": "RF",
+        "Company": "Regions Financial Corporation"
+    },
+    {
+        "Symbol": "NCLH",
+        "Company": "Norwegian Cruise Line Holdings"
+    },
+    {
+        "Symbol": "ON",
+        "Company": "ON Semiconductor"
+    },
+    {
+        "Symbol": "KHC",
+        "Company": "Kraft Heinz"
+    },
+    {
+        "Symbol": "SLB",
+        "Company": "Schlumberger"
+    },
+    {
+        "Symbol": "FCX",
+        "Company": "Freeport-McMoRan"
+    },
+    {
+        "Symbol": "HAL",
+        "Company": "Halliburton"
+    },
+    {
+        "Symbol": "KO",
+        "Company": "Coca-Cola Company (The)"
+    },
+    {
+        "Symbol": "BMY",
+        "Company": "Bristol Myers Squibb"
+    },
+    {
+        "Symbol": "VTRS",
+        "Company": "Viatris"
+    },
+    {
+        "Symbol": "OXY",
+        "Company": "Occidental Petroleum"
+    },
+    {
+        "Symbol": "ANET",
+        "Company": "Arista Networks"
+    },
+    {
+        "Symbol": "LRCX",
+        "Company": "Lam Research"
+    },
+    {
+        "Symbol": "PANW",
+        "Company": "Palo Alto Networks"
+    },
+    {
+        "Symbol": "PYPL",
+        "Company": "PayPal"
+    },
+    {
+        "Symbol": "HST",
+        "Company": "Host Hotels & Resorts"
+    },
+    {
+        "Symbol": "META",
+        "Company": "Meta Platforms"
+    },
+    {
+        "Symbol": "DIS",
+        "Company": "Walt Disney Company (The)"
+    },
+    {
+        "Symbol": "MCHP",
+        "Company": "Microchip Technology"
+    },
+    {
+        "Symbol": "BAX",
+        "Company": "Baxter International"
+    },
+    {
+        "Symbol": "ORCL",
+        "Company": "Oracle Corporation"
+    },
+    {
+        "Symbol": "CAG",
+        "Company": "Conagra Brands"
+    },
+    {
+        "Symbol": "MRK",
+        "Company": "Merck & Co."
+    },
+    {
+        "Symbol": "XYZ",
+        "Company": "Block, Inc."
+    },
+    {
+        "Symbol": "SBUX",
+        "Company": "Starbucks"
+    },
+    {
+        "Symbol": "UPS",
+        "Company": "United Parcel Service"
+    },
+    {
+        "Symbol": "APA",
+        "Company": "APA Corporation"
+    },
+    {
+        "Symbol": "MRNA",
+        "Company": "Moderna"
+    },
+    {
+        "Symbol": "LLY",
+        "Company": "Lilly (Eli)"
+    },
+    {
+        "Symbol": "NEM",
+        "Company": "Newmont"
+    },
+    {
+        "Symbol": "DVN",
+        "Company": "Devon Energy"
+    },
+    {
+        "Symbol": "PPL",
+        "Company": "PPL Corporation"
+    },
+    {
+        "Symbol": "MNST",
+        "Company": "Monster Beverage"
+    },
+    {
+        "Symbol": "AES",
+        "Company": "AES Corporation"
+    },
+    {
+        "Symbol": "NKE",
+        "Company": "Nike, Inc."
+    },
+    {
+        "Symbol": "CRM",
+        "Company": "Salesforce"
+    },
+    {
+        "Symbol": "LUV",
+        "Company": "Southwest Airlines"
+    },
+    {
+        "Symbol": "JNJ",
+        "Company": "Johnson & Johnson"
+    },
+    {
+        "Symbol": "KDP",
+        "Company": "Keurig Dr Pepper"
+    },
+    {
+        "Symbol": "MDLZ",
+        "Company": "Mondelez International"
+    },
+    {
+        "Symbol": "SCHW",
+        "Company": "Charles Schwab Corporation"
+    },
+    {
+        "Symbol": "COP",
+        "Company": "ConocoPhillips"
+    },
+    {
+        "Symbol": "WMB",
+        "Company": "Williams Companies"
+    },
+    {
+        "Symbol": "QCOM",
+        "Company": "Qualcomm"
+    },
+    {
+        "Symbol": "WBA",
+        "Company": "Walgreens Boots Alliance"
+    },
+    {
+        "Symbol": "DAL",
+        "Company": "Delta Air Lines"
+    },
+    {
+        "Symbol": "CVX",
+        "Company": "Chevron Corporation"
+    },
+    {
+        "Symbol": "MO",
+        "Company": "Altria"
+    },
+    {
+        "Symbol": "ABNB",
+        "Company": "Airbnb"
+    },
+    {
+        "Symbol": "DDOG",
+        "Company": "Datadog"
+    },
+    {
+        "Symbol": "HPQ",
+        "Company": "HP Inc."
+    },
+    {
+        "Symbol": "ENPH",
+        "Company": "Enphase Energy"
+    },
+    {
+        "Symbol": "JPM",
+        "Company": "JPMorgan Chase"
+    },
+    {
+        "Symbol": "DOC",
+        "Company": "Healthpeak Properties"
+    },
+    {
+        "Symbol": "USB",
+        "Company": "U.S. Bancorp"
+    },
+    {
+        "Symbol": "APH",
+        "Company": "Amphenol"
+    },
+    {
+        "Symbol": "NEE",
+        "Company": "NextEra Energy"
+    }
+]

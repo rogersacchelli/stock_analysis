@@ -75,8 +75,6 @@
       }
     }
   },
-  "Volatility": {},
-  "Sentiment": {},
   "Period": "3mo",
   "Short": 1,
   "Observation": ["MSFT", "NVDA", "PLTR", "TSLA"],
@@ -143,5 +141,8 @@
   "Portfolio": {
     "cash": 100000.00,
     "position_size": 0.1
+  },
+  "Recommendation": {
+    "Period" : 10
   }
 }

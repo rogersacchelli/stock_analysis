@@ -1,175 +1,119 @@
-# Stock Analysis Tool
+# Stock Trading Automation System
 
-This Stock Analysis Tool is a Python-based application designed to analyze stock data using various trend detection techniques. It generates detailed reports, optionally sending results via email, and includes a backtesting feature to evaluate historical performance.
+## Overview
+This project is a Python-based stock trading automation system designed to analyze stock market data, generate trading signals, and manage portfolios for automated trading. It leverages technical indicators such as Simple Moving Averages (SMA), Exponential Moving Averages (EMA), Relative Strength Index (RSI), and others to identify trading opportunities. The system supports backtesting, risk management, and email notifications for stock recommendations, making it a powerful tool for traders, developers, and researchers interested in algorithmic trading.
+
+The project is modular, extensible, and highly configurable via two JSON files: `setup.json` for analysis and trading parameters, and `settings.json` for system settings like email configuration. It integrates with pandas for data manipulation, tabulate for reporting, and other libraries for technical analysis.
 
 ## Features
+- **Technical Analysis**: Supports indicators like SMA/EMA crossings, RSI, Bollinger Bands, MACD, Stochastic Oscillator, and On-Balance Volume (OBV).
+- **Portfolio Management**: Manages trades with customizable position sizing and cash allocation.
+- **Risk Management**: Includes stop-loss mechanisms, Sharpe Ratio, and Sortino Ratio for risk assessment.
+- **Backtesting**: Evaluates trading strategies against historical data with performance metrics.
+- **Email Notifications**: Sends HTML-formatted stock recommendations using settings from `settings.json`.
+- **Configurable Setup**: 
+  - `setup.json`: Defines tickers, analysis parameters, risk thresholds, and portfolio settings.
+  - `settings.json`: Configures system settings, such as email server details.
+- **Modular Design**: Organized into separate modules (`main.py`, `trend.py`, `momentum.py`) for easy maintenance and extension.
 
-- Fetch historical stock data using Yahoo Finance.
-- Analyze stock data for:
-  - SMA (Simple Moving Average) crossings.
-  - EMA (Exponential Moving Average) crossings.
-  - Bollinger Band touches.
-  - Weekly Rule crossings.
-  - **Long-Term Trending Analysis**: Checks if the price has crossed a long-term moving average.
-  - **MACD Analysis**: Evaluates Moving Average Convergence Divergence (MACD) signals.
-- Generate reports in CSV format.
-- Optionally send analysis reports via email.
-- Backtest stock recommendations over a specified period.
-
-## Requirements
-
-- Python 3.8+
-- Required Python libraries:
-  - `yfinance`
-  - `pandas`
-  - `argparse`
-  - `dateutil`
-  - Other dependencies listed in the `requirements.txt` file.
-- JSON configuration files for tickers, analysis, and application settings.
+## Project Structure
+- **`main.py`**: Core script that orchestrates the trading system, including argument parsing, signal generation, backtesting, and email notifications.
+- **`trend.py`**: Implements trend-based technical indicators (e.g., SMA/EMA crossings, Bollinger Bands, MACD, Stochastic Oscillator).
+- **`momentum.py`**: Implements momentum-based indicators like RSI and ADX.
+- **`setup.json`**: Configuration file for defining tickers, analysis parameters, risk settings, and portfolio details.
+- **`settings.json`**: Configuration file for system settings, such as email server details (e.g., SMTP server, port, credentials).
+- **Other Modules** (assumed, not provided in the code):
+  - `features_extraction.py`: Handles feature extraction for machine learning or additional analysis.
+  - `portfolio_manager.py`: Manages trading logic and portfolio metrics.
+  - `risk.py`: Implements risk management strategies.
+  - `utils/`:
+    - `analysis.py`: Utility functions for stock signal generation and analysis.
+    - `argument_parsing.py`: Parses command-line arguments.
+    - `mail.py`: Handles email notifications using `settings.json`.
+    - `utils.py`: General utility functions (e.g., directory creation, hashing).
 
 ## Installation
-
-1. Clone the repository:
+1. **Clone the Repository**:
    ```bash
-   git clone <repository_url>
-   cd <repository_folder>
+   git clone https://github.com/rogersacchelli/stock_analysis.git
+   cd stock_analysis
    ```
 
-2. Install the required Python packages:
+2. **Install Dependencies**:
+   Ensure you have Python 3.11+ installed. Install required packages using:
    ```bash
    pip install -r requirements.txt
    ```
+   Example `requirements.txt`:
+   ```
+   pandas
+   numpy
+   scipy
+   tabulate
+   ```
+
+3. **Configure the System**:
+   - **Update `setup.json`**: Specify tickers, analysis parameters (e.g., SMA periods, RSI thresholds), risk settings, and portfolio details.
+   - **Update `settings.json`**: Configure email settings (e.g., SMTP server, port, credentials) for notifications.
+     - Example: Set `from_email`, `from_password`, `smtp_server`, and `smtp_port` for your email provider.
+     - Note: For Gmail, use an [App Password](https://support.google.com/accounts/answer/185833) for `from_password`.
+
+4. **Run the System**:
+   ```bash
+   python main.py --config settings.json --setup setup.json stocks/sp500_top100_volume.json --email your-email@example.com
+   ```
+   Use `python main.py --help` for a full list of command-line arguments.
 
 ## Usage
+- **Run Analysis**: Execute `main.py` with appropriate arguments to generate trading signals and recommendations.
+  ```bash
+  python main.py --config settings.json --setup setup.json --backtest --start_date 2024-01-01 --end_date 2024-12-31
+  ```
+- **Backtesting**: Enable backtesting with the `--backtest` flag to evaluate strategy performance.
+- **Email Notifications**: Use the `--email` flag to receive HTML-formatted recommendations, configured via `settings.json`.
+- **Customization**:
+  - Modify `setup.json` to enable/disable indicators, adjust periods, or change risk thresholds.
+  - Update `settings.json` to configure email settings or other system parameters.
 
-### Command-Line Arguments
-
-- `-i`, `--input`: Input file containing stock tickers in JSON format (required).
-- `-e`, `--email`: Email address to send results (optional).
-- `-c`, `--config`: Configuration file for application settings (required).
-- `-a`, `--analysis`: Analysis definition file (required).
-- `-l`, `--limit`: Limit the number of stocks processed (optional, default: 50).
-- `-b`, `--backtest`: Enables backtesting mode to evaluate recommendations over a specified period (optional).
-- `-sd`, `--bt_start_date`: Start date for backtesting in YYYY-MM-DD format (optional).
-- `-ed`, `--bt_end_date`: End date for backtesting in YYYY-MM-DD format (optional).
-
-### Example Command
-
-```bash
-python main.py \
-  -i tickers.json \
-  -e user@example.com \
-  -c config.json \
-  -a analysis.json \
-  -l 100 \
-  -b \
-  -sd 2023-01-01 \
-  -ed 2023-12-31
-```
-
-### Input Files
-
-#### Tickers File (`tickers.json`)
-A JSON file containing stock tickers:
-```json
-[
-  { "Code": "AAPL" },
-  { "Code": "GOOGL" },
-  { "Code": "MSFT" }
-]
-```
-
-#### Configuration File (`config.json`)
-Contains application settings, such as email server configuration:
-```json
-{
-  "Email": {
-    "from_email": "example@example.com",
-    "from_password": "password",
-    "smtp_server": "smtp.example.com",
-    "smtp_port": 587
-  }
-}
-```
-
-#### Analysis Definition File (`analysis.json`)
-Specifies analysis parameters:
-```json
-{
-  "Period": "1y",
-   "Trend": {
-    "long_term": {
-      "enabled": 1,
-      "period": 40,
-      "rate": 0.01,
-      "output_window": 5,
-      "avg_type": "sma",
-      "weight": 1.0
-    },
-    "sma_cross": {
-      "enabled": 1,
-      "long": 20,
-      "short": 5,
-      "output_window": 5,
-      "weight": 1.0
-    },
-    "ema_cross": {
-      "enabled": 0,
-      "long": 20,
-      "short": 5,
-      "output_window": 5,
-      "weight": 1.0
-    },
-    "bollinger_bands": {
-      "enabled": 1,
-      "avg_type": "sma",
-      "period": 20,
-      "output_window": 3,
-      "std_dev": 2,
-      "weight": 1.0
-    },
-    "week_rule": {
-      "enabled": 0,
-      "period": 4,
-      "output_window": 5,
-      "weight": 1.0
-    },
-    "macd": {
-      "enabled": 1,
-      "average_type": "ema",
-      "short": 5,
-      "long": 20,
-      "signal_window": 9,
-      "output_window": 5,
-      "weight": 2.0
-    }
-  }
-}
-```
-
-## Output
-
-- **Reports**: Generated CSV files are saved in the `reports/` directory.
-- **Logs**: Error logs are saved in the `logs/` directory.
-- **Ticker Data**: Fetched stock data is saved in the `ticker_data/` directory.
-- **Email**: If an email address is provided and not in backtest mode, the results are sent via email.
-
-## Backtesting
-
-- Enable backtesting with the `-b` flag.
-- Specify the start and end dates using `-sd` and `-ed`.
-- Backtest results are included in the generated reports.
-
-## Error Handling
-
-- Errors during data fetching or analysis are logged to the `logs/` directory.
-- Stocks with errors are skipped without terminating the script.
+## Example Output
+- **Console Output**: Tabulated stock recommendations (Symbol, Date, Close, Action) and backtest metrics.
+- **Email Output**: HTML table with recommended trades, sent using the email configuration in `settings.json`.
+- **Reports**: Saved in the `reports/` directory.
 
 ## Contributing
+We warmly welcome contributions to make this project even better! Here are some ways you can contribute:
+- **Add New Indicators**: Extend `trend.py` or `momentum.py` with additional technical indicators (e.g., VWAP, Ichimoku Cloud).
+- **Enhance Risk Management**: Improve `risk.py` with advanced strategies (e.g., Value-at-Risk, volatility-based stops).
+- **Optimize Performance**: Enhance efficiency for large datasets or real-time processing.
+- **Integrate Data Sources**: Add support for real-time market data APIs (e.g., Yahoo Finance, Alpha Vantage).
+- **Add Visualizations**: Implement charts for signals and portfolio performance (e.g., using Matplotlib or Plotly).
+- **Improve Email Templates**: Enhance HTML formatting in `mail.py` for richer notifications.
+- **Bug Fixes**: Identify and resolve issues in existing functionality.
 
-Contributions are welcome! Feel free to submit issues or pull requests.
+### How to Contribute
+1. Fork the repository.
+2. Create a new branch (`git checkout -b feature/your-feature`).
+3. Make your changes and commit (`git commit -m "Add your feature"`).
+4. Push to your fork (`git push origin feature/your-feature`).
+5. Open a Pull Request with a clear description of your changes.
+
+Please adhere to the [Contributor Covenant Code of Conduct](https://www.contributor-covenant.org/version/2/0/code_of_conduct/) and follow PEP 8 style guidelines for Python code.
+
+## Roadmap
+- Integrate real-time data feeds for live trading.
+- Add machine learning models for predictive signal generation.
+- Develop a web-based dashboard for visualizing signals and performance.
+- Support options and futures trading.
+- Enhance email notifications with embedded charts and detailed metrics.
 
 ## License
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
-This project is licensed under the Apache 2.0 License.
+## Contact
+For questions, suggestions, or issues, please open a GitHub issue or contact the maintainers at [roger.sacchelli@gmail.com](mailto:roger.sacchelli@gmail.com).
 
+## Acknowledgements
+- Built with [pandas](https://pandas.pydata.org/), [numpy](https://numpy.org/), [scipy](https://scipy.org/), and [tabulate](https://pypi.org/project/tabulate/).
+- Inspired by the open-source algorithmic trading community.
+
+Thank you for your interest in this project! Join us in building a robust and feature-rich trading system.
