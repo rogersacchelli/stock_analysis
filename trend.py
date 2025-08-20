@@ -91,7 +91,7 @@ def detect_ma_crossings(stock_data, setup, end_date, backtest=False):
         )
     )
 
-    stock_data.drop(columns=['Prev_Cross_Short', 'Prev_Cross_Long', 'Cross_Short', 'Cross_Long'], inplace=True)
+    stock_data.drop(columns=['Prev_Cross_Short', 'Prev_Cross_Long'], inplace=True)
 
     """
     # Add a Date column and filter rows with crossings

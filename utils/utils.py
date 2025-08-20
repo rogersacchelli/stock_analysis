@@ -185,10 +185,11 @@ def get_pre_analysis_period(setup, calendar_days=True):
                 if period < setup['Analysis'][analysis][method]['long']:
                     period = setup['Analysis'][analysis][method]['long']
 
-    for ft in setup['Filters'].keys():
-        for f in setup['Filters'][ft].keys():
-            if period < setup['Filters'][ft][f]['period'] and setup['Filters'][ft][f]['enabled']:
-                period = setup['Filters'][ft][f]['period']
+    #for ft in setup['Filters'].keys():
+    #    for f in setup['Filters'][ft].keys():
+
+    #        if period < setup['Filters'][ft][f]['period'] and setup['Filters'][ft][f]['enabled']:
+    #            period = setup['Filters'][ft][f]['period']
 
     if calendar_days:
         return int(period / 5) * 7 + (period % 5) + 7  # the last seven is an extra to cover holidays

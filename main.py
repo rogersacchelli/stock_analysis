@@ -1,10 +1,9 @@
 import pandas as pd
-from features_extraction import save_features_to_file
 from portfolio_manager import portfolio_manager, calculate_trade_metrics, calculate_ticker_gain
 from risk import get_stock_from_rm
 from utils.analysis import *
 from utils.argument_parsing import argument_parsing
-from utils.mail import mail_analysis, send_html_email
+from utils.mail import send_html_email
 from utils.utils import get_hash, create_directories_if_not_exist
 from tabulate import tabulate
 from pandas.tseries.offsets import BusinessDay
@@ -17,8 +16,6 @@ def main():
     args = argument_parsing()
 
     config = args.config
-    position = args.position
-    features = args.features
     backtest = args.backtest
     setup = args.setup
     ticker_list = args.input
@@ -37,7 +34,7 @@ def main():
           f"Starting Report {report_hash}\n"
           f"--------------------------------------------------------\n")
 
-    # Get recommended stocks according to setup file
+    # Get recommended stocks according to set up file
     signal_data = get_stock_signals(ticker_list, setup, limit,
                                     start_date=args.start_date,
                                     end_date=args.end_date)
@@ -84,7 +81,7 @@ def main():
     tabulated_data = tabulate(stock_recommended_df, headers='keys', tablefmt='psql', showindex=False)
     print(tabulated_data)
 
-    if args.email:
+    if args.email and not backtest: # If backtest do not send mail
         tabulated_data_html = tabulate(stock_recommended_df, headers='keys', tablefmt='html', showindex=False)
         send_html_email(receiver_email=args.email, subject="Daily Stock Recommendation",
                         html_content=tabulated_data_html, config=config)

@@ -1,4 +1,5 @@
 from datetime import datetime
+from constants import *
 
 import numpy as np
 
@@ -113,10 +114,36 @@ def get_stock_from_rm(df, setup):
     for ticker in df.keys():
 
         data = df[ticker]
+
         # Sharpe Ratio Filter
         if setup['Risk']['SharpeRatio']['enabled']:
             sharpe_ratio_buy = setup['Risk']['SharpeRatio']['min']
             data = data[data['sharpe_ratio'] >= sharpe_ratio_buy]
             df[ticker] = data
+
+        # Moving Average Filter
+        for ma in setup['Filters']['Trend'].keys():
+            if setup['Filters']['Trend'][ma]['enabled']:
+                if ma == 'ma_cross':
+
+                    # Buy if slope is higher than
+                    buy_short = setup['Filters']['Trend'][ma]['slope']['buy']['short']
+                    buy_long = setup['Filters']['Trend'][ma]['slope']['buy']['long']
+                    sell_short = setup['Filters']['Trend'][ma]['slope']['sell']['short']
+                    sell_long = setup['Filters']['Trend'][ma]['slope']['sell']['long']
+
+                    # Filter Buying signals
+                    data = data[(data[f"ma_cross_Cross"] == HOLD) | (data[f"ma_cross_Cross"] == SELL) | ((
+                           (data[f"ma_cross_Cross"] == BUY) & (data[f"MA_Slope_{ma}_short"] >= buy_short)) & (
+                           (data[f"ma_cross_Cross"] == BUY) & (data[f"MA_Slope_{ma}_long"] >= buy_long)))]
+
+                    # Filter Sell signals
+                    data = data[(data[f"ma_cross_Cross"] == HOLD) | (data[f"ma_cross_Cross"] == BUY) | ((
+                            (data[f"ma_cross_Cross"] == SELL) & (data[f"MA_Slope_{ma}_short"] <= sell_short)) & (
+                            (data[f"ma_cross_Cross"] == SELL) & (data[f"MA_Slope_{ma}_long"] <= sell_long)))]
+
+                else:
+                    pass
+                    # TODO: IMPLEMENT FILTER FOR MOVING AVERAGES
 
     return df

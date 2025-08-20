@@ -76,7 +76,6 @@
     }
   },
   "Period": "3mo",
-  "Short": 1,
   "Observation": ["MSFT", "NVDA", "PLTR", "TSLA"],
   "Filters": {
     "Trend": {
@@ -85,14 +84,14 @@
         "type": "sma",
         "period": 5,
         "slope_period": 3,
-        "slope": 0.0
+        "slope": 0.3
       },
       "middle": {
         "enabled": 0,
         "type": "sma",
         "period": 20,
         "slope_period": 3,
-        "slope": 0.0
+        "slope": 0.3
       },
       "long": {
         "enabled": 0,
@@ -100,6 +99,23 @@
         "period": 50,
         "slope_period": 3,
         "slope": 0.1
+      },
+      "ma_cross": {
+        "enabled": 1,
+        "type": "sma",
+        "period_short": 5,
+        "period_long": 20,
+        "slope_period": 3,
+        "slope": {
+          "buy" : {
+            "short" : 0.5,
+            "long" : 0.3
+          },
+          "sell" : {
+            "short" : 0.5,
+            "long" : 0.3
+          }
+        }
       }
     },
     "Momentum": {
@@ -143,6 +159,6 @@
     "position_size": 0.1
   },
   "Recommendation": {
-    "Period" : 10
+    "Period" : 3
   }
 }

@@ -154,10 +154,19 @@ def add_moving_average_slope(stock_data, setup):
 
         if not setup['Filters']['Trend'][ma]['enabled']:
             continue
-        period = setup['Filters']['Trend'][ma]['period']
-        slope = setup['Filters']['Trend'][ma]['slope_period']
 
-        calculate_ma_slope(stock_data, ma_period=period, slope_period=slope, moving_average_type=ma)
+        if 'ma_cross' in ma:
+            period_short = setup['Filters']['Trend'][ma]['period_short']
+            period_long = setup['Filters']['Trend'][ma]['period_long']
+            slope = setup['Filters']['Trend'][ma]['slope_period']
+
+            calculate_ma_slope(stock_data, ma_period=period_short, slope_period=slope, moving_average_type=f"{ma}_short")
+            calculate_ma_slope(stock_data, ma_period=period_long, slope_period=slope, moving_average_type=f"{ma}_long")
+        else:
+            period = setup['Filters']['Trend'][ma]['period']
+            slope = setup['Filters']['Trend'][ma]['slope_period']
+
+            calculate_ma_slope(stock_data, ma_period=period, slope_period=slope, moving_average_type=ma)
 
 
 def analysis_filter(data, setup, method):

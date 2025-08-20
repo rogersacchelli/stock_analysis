@@ -169,6 +169,9 @@ def calculate_trade_metrics(trades_df, benchmark, setup):
         drawdown = (peak - equity) / peak * 100 if peak > 0 else 0.0
         max_drawdown = max(max_drawdown, drawdown)
 
+    tabulated_data = tabulate(trades_df, headers='keys', tablefmt='psql', showindex=False)
+    print(tabulated_data)
+
     output = {
         'win_ratio': win_ratio,
         'total_profit': total_profit,
