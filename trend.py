@@ -1,4 +1,5 @@
 import numpy as np
+import talib
 from scipy import stats
 from constants import *
 

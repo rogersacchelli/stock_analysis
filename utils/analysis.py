@@ -1,5 +1,6 @@
 from momentum import add_adx, add_rsi
 import logging
+import talib
 from utils.logging_config import logger
 from risk import get_stop_data, add_shape_ratio, add_sortino_ratio
 from utils.utils import get_pre_analysis_period, store_filter_data, get_filter_data, get_ticker_list, \
